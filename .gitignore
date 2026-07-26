@@ -1,0 +1,20 @@
+# OS / 에디터
+.DS_Store
+
+# 환경 변수
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+
+# Node (스택에 맞게 추가)
+node_modules/
+
+# 온보딩 백업
+.backup/
+
+# Claude Code 세션 로컬 설정
+.claude/settings.local.json

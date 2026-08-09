@@ -31,7 +31,7 @@
       "name": "extract",
       "status": "completed",
       "started_at": "2026-08-09T23:41:10+0900",
-      "completed_at": "2026-08-09T23:43:28+0900",
+      "completed_at": "2026-08-09T23:43:52+0900",
       "summary": "secretary.extract — fetch_body(HTML만 처리, trafilatura 추출, 300자 미만·모든 예외는 None, 8000자 상한) + extract_articles(실패 항목도 body=None으로 유지, summary_hint 승격 금지). HTML 픽스처 2개와 monkeypatch 기반 테스트 9건 추가(총 41건). 실제 사이트 추출 8000자 확인."
     },
     {

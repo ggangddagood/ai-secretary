@@ -39,7 +39,7 @@
       "name": "llm-curate-summarize",
       "status": "completed",
       "started_at": "2026-08-09T23:43:28+0900",
-      "completed_at": "2026-08-09T23:52:10+0900",
+      "completed_at": "2026-08-09T23:48:58+0900",
       "summary": "secretary.llm — MODEL=claude-opus-5 상수 + curate(후보 40건·score순, 후보 밖 URL 폐기·count 절단)와 summarize(body=None은 LLM 페이로드에서 제외하고 summary_ko=[]/action_hint_ko=None으로 조립). 구조화 출력은 messages.parse(output_format=Pydantic) — output_config만 주면 parsed_output이 None이라 ENGINEERING_NOTES에 기록. pydantic 의존성 추가, 가짜 클라이언트 테스트 5건(총 46건)."
     },
     {

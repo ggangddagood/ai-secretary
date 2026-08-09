@@ -7,7 +7,7 @@
       "name": "project-setup",
       "status": "completed",
       "started_at": "2026-08-09T23:25:00+0900",
-      "completed_at": "2026-08-09T23:28:05+0900",
+      "completed_at": "2026-08-09T23:28:39+0900",
       "summary": "pyproject.toml(src 레이아웃, ruff+pytest 게이트) + secretary.config/models/log 뼈대 + config 테스트 7건. verify.sh를 ruff check/format/pytest로 교체해 exit 0 통과."
     },
     {

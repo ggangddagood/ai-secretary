@@ -22,6 +22,12 @@
 - 원인: Python 3는 절대 임포트가 기본이라 `import http`는 항상 stdlib를 찾고, 이 모듈은 `secretary.http`로만 접근된다.
 - 대응: 패키지 안에서는 `from ..http import make_client`처럼 상대 임포트로만 쓴다. 이 규칙을 지키는 한 httpx 내부의 `import http`도 정상 동작한다.
 
+### `messages.parse()`에 `output_config`만 주면 `parsed_output`이 조용히 `None`이다
+
+- 증상: `client.messages.parse(..., output_config={"format": 스키마})`로 호출하면 API는 정상 응답하는데 `response.parsed_output`이 항상 `None`이다. 에러도 경고도 없다.
+- 원인: anthropic SDK(0.121.0)의 `parse()`는 `output_format=` 인자로 받은 타입으로만 응답 텍스트를 검증한다. `output_config`는 요청 본문에 그대로 실려 가지만 응답 파싱에는 관여하지 않는다.
+- 대응: `parse()`를 쓸 때는 Pydantic 모델을 `output_format=`으로 넘긴다(`secretary/llm.py`). 원시 JSON 스키마를 직접 넘겨야 하면 `messages.create(output_config=...)` + 직접 파싱이지, `parse()`가 아니다.
+
 ## 반복 작업 체크리스트
 
 ### RSS 피드 추가/교체

@@ -1,0 +1,50 @@
+{
+  "project": "ai-secretary",
+  "phase": "daily-brief-mvp",
+  "steps": [
+    {
+      "step": 0,
+      "name": "project-setup",
+      "status": "completed",
+      "started_at": "2026-08-09T23:25:00+0900",
+      "completed_at": "2026-08-09T23:28:05+0900",
+      "summary": "pyproject.toml(src 레이아웃, ruff+pytest 게이트) + secretary.config/models/log 뼈대 + config 테스트 7건. verify.sh를 ruff check/format/pytest로 교체해 exit 0 통과."
+    },
+    {
+      "step": 1,
+      "name": "sources",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "state-dedupe",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "extract",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "llm-curate-summarize",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "delivery",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "pipeline",
+      "status": "pending"
+    },
+    {
+      "step": 7,
+      "name": "ops-docs",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-09T23:25:00+0900"
+}

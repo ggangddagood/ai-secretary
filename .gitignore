@@ -9,6 +9,9 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
 
 # Node (스택에 맞게 추가)
 node_modules/

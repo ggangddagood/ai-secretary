@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-secretary"
+version = "0.1.0"
+description = "AI 활용·수익화·마케팅 정보를 매일 수집해 텔레그램으로 브리핑하는 배치"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic",
+    "httpx",
+    "feedparser",
+    "trafilatura",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+# 포매팅 게이트는 이 프로젝트 소스만 대상으로 한다. lint(`ruff check .`)는 전체에 그대로 적용된다.
+# - scripts/: 이 프로젝트 이전부터 있던 프레임워크 하네스 코드
+# - *.md: ruff는 마크다운 안의 python 코드 블록도 포매팅한다. spec/step 문서가 정본이므로 고쳐 쓰면 안 된다.
+exclude = ["scripts/**", "*.md"]
+
+[tool.ruff.lint]
+# ruff의 전통적 기본 규칙(E4/E7/E9/F) + import 정렬(I).
+# 명시적으로 고정한다 — ruff 버전이 올라가며 기본 규칙이 넓어져도 게이트가 흔들리지 않게.
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

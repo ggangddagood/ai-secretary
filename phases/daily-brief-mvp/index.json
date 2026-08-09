@@ -45,7 +45,10 @@
     {
       "step": 5,
       "name": "delivery",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-09T23:48:58+0900",
+      "completed_at": "2026-08-09T23:54:15+0900",
+      "summary": "secretary.render(텔레그램 HTML 렌더링 — &<> 이스케이프, 요약 없는 항목은 제목·축·출처만, 4096자 초과 시 항목 경계 분할·단독 초과 항목은 줄 경계에서 절단) + secretary.telegram(sendMessage 직접 호출, ok=false를 HTTP 200에서도 실패로 처리, 봇 토큰을 로그·예외에서 ***로 마스킹). 테스트 10건 추가(총 56건), AC 렌더링 출력 확인."
     },
     {
       "step": 6,

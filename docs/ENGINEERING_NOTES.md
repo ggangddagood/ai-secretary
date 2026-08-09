@@ -28,6 +28,12 @@
 - 원인: anthropic SDK(0.121.0)의 `parse()`는 `output_format=` 인자로 받은 타입으로만 응답 텍스트를 검증한다. `output_config`는 요청 본문에 그대로 실려 가지만 응답 파싱에는 관여하지 않는다.
 - 대응: `parse()`를 쓸 때는 Pydantic 모델을 `output_format=`으로 넘긴다(`secretary/llm.py`). 원시 JSON 스키마를 직접 넘겨야 하면 `messages.create(output_config=...)` + 직접 파싱이지, `parse()`가 아니다.
 
+### httpx 예외 메시지에는 요청 URL이 그대로 들어간다 — 텔레그램 URL은 봇 토큰이다
+
+- 증상: 발송이 실패하면 로그나 스택트레이스에 `https://api.telegram.org/bot<진짜토큰>/sendMessage`가 찍힌다. `raise_for_status()`가 던지는 `HTTPStatusError`가 대표적이다.
+- 원인: 텔레그램은 인증을 헤더가 아니라 경로에 담는다. URL을 남기는 모든 경로(예외 메시지, `__context__`로 이어진 원인 예외, 로그)가 토큰 유출 경로가 된다.
+- 대응: `secretary/telegram.py`는 `raise_for_status()`를 쓰지 않고 응답 JSON의 `ok`를 직접 본다. httpx 예외는 `TelegramError`로 감싸 `from None`으로 원인을 끊고, 메시지에 토큰 문자열을 `***`로 치환한다. 로그에는 상수 `MASKED_URL`만 남긴다. 검증: `tests/test_telegram.py::test_bot_token_never_appears_in_errors_or_logs`
+
 ## 반복 작업 체크리스트
 
 ### RSS 피드 추가/교체

@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+<title>GeekNews - 개발/기술/스타트업 뉴스 서비스</title>
+<link rel='alternate' type='text/html' href='https://news.hada.io' />
+<id>https://news.hada.io/rss/news</id>
+<updated>2026-08-09T22:54:39+09:00</updated>
+<entry>
+  <title><![CDATA[Show GN: Sift - 원클릭 복구를 지원하는 Rust 기반 로컬 파일 자동 정리 CLI]]></title>
+  <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=32300' />
+  <id>https://news.hada.io/topic?id=32300</id>
+  <updated>2026-08-09T22:54:39+09:00</updated>
+  <published>2026-08-09T22:54:39+09:00</published>
+  <author><name>taevel02</name></author>
+  <content type='html' xml:lang='ko'><![CDATA[<p>Hazel을 &amp; 오래 썼지만  GUI가 무겁습니다</p>]]></content>
+</entry>
+<entry>
+  <title><![CDATA[LLM 에이전트를 사내 업무에 도입한 6개월 회고]]></title>
+  <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=32291' />
+  <id>https://news.hada.io/topic?id=32291</id>
+  <updated>2026-08-09T18:10:00+09:00</updated>
+  <published>2026-08-09T18:10:00+09:00</published>
+  <author><name>xguru</name></author>
+  <content type='html' xml:lang='ko'><![CDATA[<p>도입 과정에서 겪은 시행착오를 정리했습니다</p>]]></content>
+</entry>
+<entry>
+  <title><![CDATA[한 달 전에 올라온 오래된 글]]></title>
+  <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=31000' />
+  <id>https://news.hada.io/topic?id=31000</id>
+  <updated>2026-07-09T10:00:00+09:00</updated>
+  <published>2026-07-09T10:00:00+09:00</published>
+  <author><name>xguru</name></author>
+  <content type='html' xml:lang='ko'><![CDATA[<p>오래된 내용</p>]]></content>
+</entry>
+</feed>

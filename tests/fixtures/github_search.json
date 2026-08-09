@@ -1,0 +1,22 @@
+{
+  "total_count": 1888,
+  "incomplete_results": false,
+  "items": [
+    {
+      "id": 1041234567,
+      "full_name": "waiterve/wai-play",
+      "description": "WAI Play - AI web game testing and quality evaluation platform",
+      "html_url": "https://github.com/waiterve/wai-play",
+      "stargazers_count": 229,
+      "created_at": "2026-08-04T07:20:22Z"
+    },
+    {
+      "id": 1041234568,
+      "full_name": "octo-labs/agent-runtime",
+      "description": null,
+      "html_url": "https://github.com/octo-labs/agent-runtime",
+      "stargazers_count": 87,
+      "created_at": "2026-08-06T15:02:11Z"
+    }
+  ]
+}

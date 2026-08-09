@@ -1,0 +1,35 @@
+{
+  "hits": [
+    {
+      "objectID": "49223082",
+      "title": "Fastmail offers EU data region",
+      "url": "https://www.fastmail.com/blog/fastmail-offers-eu-data-region/",
+      "author": "groomlake",
+      "points": 214,
+      "num_comments": 96,
+      "created_at": "2026-08-09T09:12:03.000Z",
+      "created_at_i": 1786000323
+    },
+    {
+      "objectID": "48886741",
+      "title": "Ask HN: Add flag for AI-generated articles",
+      "url": null,
+      "author": "tomhow",
+      "points": 1102,
+      "num_comments": 431,
+      "created_at": "2026-08-09T01:24:20.000Z",
+      "created_at_i": 1785979460
+    },
+    {
+      "objectID": "49230011",
+      "title": "",
+      "url": "https://example.com/comment-without-title",
+      "author": "nobody",
+      "points": 5,
+      "created_at": "2026-08-09T11:00:00.000Z",
+      "created_at_i": 1786006800
+    }
+  ],
+  "nbHits": 3,
+  "page": 0
+}

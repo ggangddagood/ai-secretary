@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "sources",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-09T23:28:39+0900",
+      "completed_at": "2026-08-09T23:40:12+0900",
+      "summary": "HN(Algolia)/GeekNews/GitHub Search/RSS 4개 소스 + 공유 httpx 클라이언트. collect_all이 소스별 실패를 warning으로 흡수하고 URL 중복 제거·score 정렬. 테스트 16건 추가(총 23건). 실제 수집 108건(HN 29/GeekNews 21/GitHub 35/RSS 23), Indie Hackers 피드 폐지 확인해 Lenny's Newsletter로 교체."
     },
     {
       "step": 2,

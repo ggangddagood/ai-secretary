@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "state-dedupe",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-09T23:38:07+0900",
+      "completed_at": "2026-08-09T23:48:00+0900",
+      "summary": "secretary.state — URL 정규화(sha1 키), seen.json 로드/원자적 저장, filter_unseen/mark_seen/prune(90일). 깨진 파일·version 불일치는 경고 후 빈 기록. state/seen.json 초기 파일 커밋. 테스트 9건 추가(총 32건)."
     },
     {
       "step": 3,

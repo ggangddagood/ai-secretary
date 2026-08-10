@@ -55,7 +55,7 @@
       "name": "pipeline",
       "status": "completed",
       "started_at": "2026-08-10T23:45:29+0900",
-      "completed_at": "2026-08-10T23:52:00+0900",
+      "completed_at": "2026-08-10T23:48:53+0900",
       "summary": "secretary.main — 수집→중복 제거→선별→본문 추출→요약→렌더링→발송→발송 기록 배선(build_brief/run). 발송 성공 뒤에만 mark_seen→prune→save_seen, 발송 실패는 재발송 없이 exit 1, 그 외 실패는 render_failure 발송 후 exit 1. --dry-run/--limit/--verbose + __main__.py. 테스트 5건(총 61건, verify.sh exit 0). AC 실행: 실제 소스 143건 → 선별 5건 → 본문 4/5 → dry-run exit 0, 요약 2건을 원문 README와 대조해 사실 일치 확인."
     },
     {

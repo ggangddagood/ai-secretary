@@ -1,0 +1,47 @@
+name: daily-brief
+
+on:
+  schedule:
+    - cron: "0 23 * * *" # 08:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write # state/seen.json 커밋용
+
+# 수동 실행과 스케줄이 겹치면 두 실행이 같은 파일을 고쳐 push가 충돌한다.
+# 줄을 세우되 앞 실행을 취소하지는 않는다 — 취소된 실행은 발송만 하고 기록을 남기지 못한다.
+concurrency:
+  group: daily-brief
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Send brief
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m secretary.main
+
+      # 발송이 실패하면 실행되지 않아야 한다 — 실패한 실행의 부분 상태를 커밋하면
+      # 보내지 못한 항목이 발송 기록에 남아 다음 실행에서 영영 빠진다.
+      - name: Commit seen state
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --quiet state/seen.json || (git add state/seen.json && git commit -m "chore: update seen state" && git push)

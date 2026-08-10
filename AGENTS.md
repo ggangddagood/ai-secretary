@@ -1,30 +1,35 @@
-# {프로젝트명}
+# ai-secretary
 
 ## 개요
 
-{무엇을 하는 서비스이고, 누가 쓰고, 어느 규모인지 2~3줄.
-예: 소상공인용 재고 관리 SaaS. 웹 대시보드 + REST API. 1인이 운영하는 소규모 서비스 — 과한 인프라 금지.}
+AI 활용·수익화·마케팅 정보를 여러 소스에서 매일 수집해, 엄선 5건을 한국어 요약과 실행 힌트로
+정리해 텔레그램으로 1회 발송하는 배치다. 사용자는 운영자 본인 1명이고, 가입·인증·다중 사용자
+개념이 없다. 웹 화면도 서버도 없다 — GitHub Actions cron이 하루 한 번 돌리는 CLI 하나다.
+과한 인프라를 들이지 않는다.
 
 ## 기술 스택
 
-- {프레임워크 (예: Next.js 15, App Router)}
-- {언어 (예: TypeScript strict mode)}
-- {데이터 (예: PostgreSQL + Drizzle)}
-- {스타일링 (예: Tailwind CSS)}
+- Python 3.11 (src 레이아웃, `src/secretary/`)
+- 수집: httpx + feedparser / 본문 추출: trafilatura
+- LLM: Gemini `gemini-3.6-flash` (`google-genai` SDK, 선별 1회 + 요약 1회)
+- 실행: GitHub Actions cron (`0 23 * * *` UTC = 08:00 KST)
+- 상태: 리포지토리 내 JSON 파일 (`state/seen.json`) — DB 없음
+- 검증: ruff (lint + format) + pytest
 
 ## 하드 게이트 (CRITICAL)
 
-위반하면 안 되는 최상위 규칙 3~5개만 여기에. 전체 규칙은 `docs/STANDARDS.md`.
+위반하면 안 되는 최상위 규칙. 전체 규칙은 `docs/STANDARDS.md`.
 
-- CRITICAL: {예: 모든 DB 접근은 services/ 레이어를 통해서만. 라우트 핸들러에서 직접 쿼리 금지}
-- CRITICAL: {예: 클라이언트 컴포넌트에서 외부 API 직접 호출 금지}
-- CRITICAL: 새 기능은 테스트를 먼저 작성하고 통과시킨다 (TDD)
+- CRITICAL: 본문을 확보하지 못한 항목에 요약을 생성하지 않는다
+- CRITICAL: 발송 기록(`state/seen.json`)은 텔레그램 발송 성공 이후에만 갱신한다
+- CRITICAL: 모든 환경 변수는 `config.py`를 통해서만 읽는다. `os.environ` 직접 참조 금지
+- CRITICAL: 시크릿을 로그·예외 메시지·발송 메시지·커밋에 남기지 않는다
 
 ## 명령어
 
 ```bash
-bash scripts/verify.sh    # 검증 단일 진입점 (lint + typecheck + test + build)
-{npm run dev              # 개발 서버}
+bash scripts/verify.sh              # 검증 단일 진입점 (ruff check + ruff format --check + pytest)
+python -m secretary.main --dry-run  # 실제 수집·요약 후 발송 없이 stdout 출력
 ```
 
 ## 문서 내비게이션
@@ -35,11 +40,11 @@ docs/
 ├── WORKFLOW.md              ← AI 작업 사이클 사용법
 ├── PRD.md                   ← 제품 요구사항 — 무엇을 왜 만드는가
 ├── ARCHITECTURE.md          ← 시스템 구조와 데이터 흐름
-├── BUSINESS_RULES.md        ← 도메인 규칙의 정본 (불변 조건, 상태 전이, 엣지)
+├── BUSINESS_RULES.md        ← 도메인 규칙의 정본 (4개 축, 선별·중복·보존 규칙)
 ├── STANDARDS.md             ← 규칙 전체 (위반 판정 가능한 것만)
-├── SECURITY.md              ← 인증/인가/민감 정보
-├── UI_GUIDE.md              ← UI 디자인 규칙 + 금지 패턴
-├── OPERATIONS.md            ← 셋업/빌드/배포 절차
+├── SECURITY.md              ← 시크릿 3종의 출처·저장·마스킹·유출 대응
+├── UI_GUIDE.md              ← UI 없음 — 해당 없음
+├── OPERATIONS.md            ← 봇 생성·시크릿 등록·로컬 실행·수동 실행·시각 변경
 ├── ENGINEERING_NOTES.md     ← 함정과 비자명 지식 (증상→원인→대응)
 ├── DECISIONS.md             ← 트레이드오프가 있었던 결정 기록 (ADR)
 └── tracking/
@@ -52,15 +57,16 @@ phases/                      ← 작업 계획과 실행 상태 (spec + step)
 
 1. `docs/tracking/STATUS.md` — 현재 위치 파악
 2. `docs/STANDARDS.md` + `docs/ENGINEERING_NOTES.md` — 규칙과 함정
-3. 작업 영역의 문서 — 도메인 로직이면 `BUSINESS_RULES.md`, UI면 `UI_GUIDE.md`
-4. {위험 작업별 필수 선행 읽기 — 예: 인증을 건드리기 전 SECURITY.md의 인가 모델}
+3. 선별·중복·요약 규칙을 건드리면 `docs/BUSINESS_RULES.md`
+4. 시크릿·발송을 건드리기 전에 `docs/SECURITY.md`의 마스킹 규칙
+5. 새 소스를 추가하기 전에 `docs/ENGINEERING_NOTES.md`의 "RSS 피드 추가/교체" 체크리스트
 
 ## 워크플로
 
 - 새 기능/큰 변경: `/plan`(계획·승인) → `/build`(실행) → `/review`(검증). 상세: `docs/WORKFLOW.md`
 - **자동 전환 규칙**: 사용자가 `/plan`을 명시하지 않았더라도, 요청이 아래 기준에 하나라도 해당하면 바로 구현하지 말고 `.claude/commands/plan.md`의 워크플로를 따른다. 전환할 때는 "계획부터 만들겠다"고 한 줄 알리고 시작한다:
   - 새 기능 또는 새 도메인 엔티티 추가
-  - DB 스키마, 외부 인터페이스(API 계약), 인증/인가를 건드리는 변경
+  - 상태 파일 스키마, 외부 인터페이스(CLI 계약), 시크릿 취급을 건드리는 변경
   - 여러 모듈에 걸치거나 파일 3개 이상 수정이 예상되는 변경
   - 요구사항이 모호해서 제품/도메인 결정이 먼저 필요한 경우
 - 작은 기계적 수정(오타, 한 줄 변경, 원인이 명확한 버그 픽스): 전체 사이클 없이 바로 수정하되, 완료 전 `bash scripts/verify.sh` 통과 필수
@@ -76,5 +82,6 @@ phases/                      ← 작업 계획과 실행 상태 (spec + step)
 
 ## 문제 라우팅
 
-- {프로젝트 치명 조건 — 예: 데이터 격리 위반, 인가 우회, 마이그레이션 손상} 발견 → 즉시 사용자에게 보고하고 중단
+- 시크릿이 로그·커밋·발송 메시지에 노출된 흔적을 발견 → 즉시 사용자에게 보고하고 중단 (대응 절차는 `docs/SECURITY.md`)
+- 발송하지 않은 항목이 `state/seen.json`에 들어간 정황을 발견 → 즉시 보고하고 중단. 그 항목은 영영 발송되지 않는다
 - 그 외 당장 못 고치는 문제 → `docs/tracking/FINDINGS.md`에 기록 (증상→영향→왜 지금 못 고치나)

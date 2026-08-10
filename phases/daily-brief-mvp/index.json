@@ -39,7 +39,7 @@
       "name": "llm-curate-summarize",
       "status": "completed",
       "started_at": "2026-08-10T23:27:52+0900",
-      "completed_at": "2026-08-10T23:44:41+0900",
+      "completed_at": "2026-08-10T23:45:29+0900",
       "summary": "LLM 제공자를 Claude에서 Gemini로 교체 — secretary.llm이 google-genai의 interactions.create(response_format JSON 스키마)를 쓰고 make_client(cfg)로 키를 주입한다. curate/summarize 시그니처·프롬프트·동작 계약(후보 40건 절단, 후보 밖 URL 폐기, body=None 항목은 LLM에 미전송)은 그대로. config는 GEMINI_API_KEY로 전환. 테스트 61건 유지(verify.sh exit 0), 실제 Gemini 호출로 curate·summarize 양쪽 스키마 수용 확인."
     },
     {

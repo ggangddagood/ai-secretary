@@ -4,6 +4,19 @@
 
 ## 함정
 
+### httpx의 INFO 로그가 텔레그램 봇 토큰을 평문으로 남긴다
+
+- 증상: `telegram.py`가 URL을 `bot***`로 마스킹해 로그를 남기는데도, 바로 다음 줄에 `INFO httpx: HTTP Request: POST https://api.telegram.org/bot<봇ID>:<토큰>/sendMessage` 가 토큰을 통째로 찍는다. 실제로 한 번 유출됐고 봇 토큰을 폐기·재발급해야 했다.
+- 원인: 텔레그램은 봇 토큰을 **URL 경로**에 넣는다(헤더가 아니다). httpx는 모든 요청 URL을 INFO로 남기므로 `logging.basicConfig(level=INFO)`를 부르는 순간 우리 마스킹과 무관하게 원본 URL이 로그에 들어간다. GitHub Actions는 등록된 Secret을 자동 마스킹하지만 로컬 실행에는 그 보호가 없다.
+- 대응: `log.py`가 두 겹으로 막는다. (1) `_URL_LOGGING_LIBRARIES`(httpx/httpcore/urllib3/google_genai)를 `--verbose`에서도 WARNING으로 고정한다. (2) `SecretRedactingFilter`가 루트 핸들러에 붙어 출력 직전에 `bot<숫자>:<영숫자>` 패턴을 `bot***`로 치환한다. 레벨만 낮추는 1번만으로는 새 의존성이 늘거나 누가 레벨을 되돌리면 다시 샌다.
+- 검증: `tests/test_log.py` 6건. 새 HTTP 라이브러리를 추가하면 `_URL_LOGGING_LIBRARIES`에 이름을 넣고, 실제 호출 후 로그에 토큰이 없는지 확인한다.
+
+### `logging.basicConfig()`는 핸들러가 이미 있으면 조용히 무시된다
+
+- 증상: `setup_logging(verbose=True)`를 불렀는데 루트 로거 레벨이 INFO 그대로다. 예외도 경고도 없다.
+- 원인: `basicConfig()`는 루트에 핸들러가 하나라도 있으면 아무 일도 하지 않고 반환한다. 테스트에서 두 번 호출하거나, pytest·다른 라이브러리가 먼저 로깅을 구성한 뒤라면 레벨도 포맷도 적용되지 않는다. 위의 마스킹 필터도 함께 빠지므로 보안 문제로 이어진다.
+- 대응: `force=True`를 준다. 기존 핸들러를 제거하고 다시 구성하므로 몇 번을 불러도 같은 결과가 된다.
+
 ### 죽은 RSS 피드는 예외가 아니라 빈 결과로 나타난다
 
 - 증상: 피드 URL이 HTTP 200을 주는데 수집 항목이 0건이다. `raise_for_status()`도 통과한다.

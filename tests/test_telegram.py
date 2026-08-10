@@ -19,7 +19,7 @@ def make_config() -> Config:
     return Config(
         telegram_bot_token=TOKEN,
         telegram_chat_id="99",
-        anthropic_api_key="key",
+        gemini_api_key="key",
         github_token=None,
         brief_item_count=5,
         state_path=Path("state/seen.json"),

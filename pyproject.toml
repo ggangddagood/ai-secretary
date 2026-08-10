@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "AI 활용·수익화·마케팅 정보를 매일 수집해 텔레그램으로 브리핑하는 배치"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic",
+    "google-genai",
     "httpx",
     "feedparser",
     "pydantic",

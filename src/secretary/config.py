@@ -14,7 +14,7 @@ from typing import Final
 REQUIRED_VARS: Final[tuple[str, ...]] = (
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID",
-    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
 )
 
 DEFAULT_BRIEF_ITEM_COUNT: Final[int] = 5
@@ -30,7 +30,7 @@ class ConfigError(Exception):
 class Config:
     telegram_bot_token: str
     telegram_chat_id: str
-    anthropic_api_key: str
+    gemini_api_key: str
     github_token: str | None
     brief_item_count: int
     state_path: Path
@@ -74,7 +74,7 @@ def load_config(*, require_secrets: bool = True) -> Config:
     return Config(
         telegram_bot_token=_get("TELEGRAM_BOT_TOKEN"),
         telegram_chat_id=_get("TELEGRAM_CHAT_ID"),
-        anthropic_api_key=_get("ANTHROPIC_API_KEY"),
+        gemini_api_key=_get("GEMINI_API_KEY"),
         github_token=_get("GITHUB_TOKEN") or None,
         brief_item_count=_int_env("BRIEF_ITEM_COUNT", DEFAULT_BRIEF_ITEM_COUNT),
         state_path=Path(_get("STATE_PATH") or DEFAULT_STATE_PATH),

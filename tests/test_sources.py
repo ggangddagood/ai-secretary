@@ -221,7 +221,7 @@ def make_config(**overrides) -> Config:
     defaults = {
         "telegram_bot_token": "",
         "telegram_chat_id": "",
-        "anthropic_api_key": "",
+        "gemini_api_key": "",
         "github_token": None,
         "brief_item_count": 5,
         "state_path": Path("state/seen.json"),

@@ -84,7 +84,7 @@ python -m secretary.main [--dry-run] [--limit N]
 | GeekNews | `https://news.hada.io/rss/news` | 없음 |
 | GitHub | `https://api.github.com/search/repositories` | 없음(60req/h) 또는 `GITHUB_TOKEN` |
 | RSS 피드 | 각 피드 URL | 없음 |
-| Claude API | `anthropic` SDK | `ANTHROPIC_API_KEY` |
+| Gemini API | `google-genai` SDK | `GEMINI_API_KEY` |
 | Telegram | `https://api.telegram.org/bot<token>/sendMessage` | `TELEGRAM_BOT_TOKEN` |
 
 ### 환경 변수
@@ -93,7 +93,7 @@ python -m secretary.main [--dry-run] [--limit N]
 | --- | --- | --- | --- |
 | `TELEGRAM_BOT_TOKEN` | O | — | 봇 인증 |
 | `TELEGRAM_CHAT_ID` | O | — | 수신 채팅 ID |
-| `ANTHROPIC_API_KEY` | O | — | Claude API |
+| `GEMINI_API_KEY` | O | — | Gemini API |
 | `GITHUB_TOKEN` | X | 없음 | GitHub API rate limit 완화 |
 | `BRIEF_ITEM_COUNT` | X | `5` | 브리핑 항목 수 |
 | `STATE_PATH` | X | `state/seen.json` | 발송 기록 경로 |
@@ -110,9 +110,9 @@ python -m secretary.main [--dry-run] [--limit N]
 
 ### 스스로 확정 (근거 포함)
 
-- **LLM = `claude-opus-5`** (Claude API). 하루 1회 배치라 호출량이 적어 모델 등급을 낮춰 절약할 실익이 없다. 예상 비용은 하루 $0.2~0.5 수준.
+- **LLM = Gemini `gemini-3.6-flash` (`google-genai` SDK)**. 사용자가 유료 API 결제 없이 시작하기로 결정했다. Google AI Studio 무료 티어는 신용카드 없이 키를 발급하고, 하루 요청 한도가 수백 건이라 하루 2회 호출인 이 배치에는 충분하다. 대가로 두 가지를 감수한다: (1) 무료 티어는 입력·출력이 Google의 제품 개선에 사용될 수 있다 — 이 배치가 보내는 것은 공개된 기사 본문과 제목뿐이므로 비공개 정보 유출 위험은 없다. (2) 무료 티어 한도·정책은 예고 없이 바뀔 수 있다. 유료 전환이 필요해지면 교체 지점은 `llm.py` 한 파일이다.
 - **2단계 LLM 호출(선별 → 본문 추출 → 요약)**. 1회 호출로 선별과 요약을 동시에 하면 제목만 보고 요약을 지어내는 환각이 발생한다. 요약은 반드시 추출된 본문을 근거로 한다.
-- **구조화 출력은 `client.messages.parse()` + Pydantic 스키마**. 자유 텍스트 파싱·재시도 루프를 없앤다.
+- **구조화 출력은 Gemini `response_format`(JSON Schema) + Pydantic 스키마**. 자유 텍스트 파싱·재시도 루프를 없앤다.
 - **상태 저장 = 리포지토리 내 `state/seen.json`을 GitHub Actions가 커밋**. DB 불필요, 무료, 히스토리로 "지난주에 뭘 받았는지" 조회 가능. GitHub Actions Cache는 7일 만료라 부적합.
 - **발송 시각 = 08:00 KST (cron `0 23 * * *` UTC)**. 환경 변수가 아닌 워크플로 cron으로 조절하며, 변경이 결과 의미를 바꾸지 않으므로 실행 단계 재량이 아닌 고정값으로 둔다.
 - **텔레그램 `parse_mode=HTML`**. MarkdownV2는 `.`, `-`, `(` 등 이스케이프 규칙이 까다로워 요약 문장에서 발송 실패를 유발한다. HTML은 `&`, `<`, `>` 3개만 이스케이프하면 된다.

@@ -17,7 +17,7 @@ def make_config(tmp_path: Path) -> Config:
     return Config(
         telegram_bot_token="token",
         telegram_chat_id="99",
-        anthropic_api_key="key",
+        gemini_api_key="key",
         github_token=None,
         brief_item_count=5,
         state_path=tmp_path / "seen.json",
@@ -73,7 +73,7 @@ def patch_pipeline(monkeypatch, cfg, *, items=None, summarize=None, send=None):
         saved["seen"] = seen
 
     monkeypatch.setattr(main_module, "load_config", lambda *, require_secrets=True: cfg)
-    monkeypatch.setattr(main_module, "Anthropic", lambda api_key: object())
+    monkeypatch.setattr(main_module, "make_client", lambda config: object())
     monkeypatch.setattr(main_module, "collect_all", lambda config, *, now: list(candidates))
     monkeypatch.setattr(main_module, "load_seen", lambda path: {})
     monkeypatch.setattr(

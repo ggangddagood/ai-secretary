@@ -15,11 +15,11 @@ import logging
 import sys
 from datetime import date, datetime, timezone
 
-from anthropic import Anthropic
+from google import genai
 
 from .config import Config, ConfigError, load_config
 from .extract import extract_articles
-from .llm import curate, summarize
+from .llm import curate, make_client, summarize
 from .log import setup_logging
 from .models import Brief, Item
 from .render import render_brief, render_failure
@@ -36,7 +36,7 @@ class PipelineError(Exception):
 
 
 def build_brief(
-    cfg: Config, client: Anthropic, *, now: datetime, limit: int
+    cfg: Config, client: genai.Client, *, now: datetime, limit: int
 ) -> tuple[Brief, list[Item]]:
     """브리핑과 거기 실린 원본 항목 목록을 만든다.
 
@@ -69,10 +69,10 @@ def build_brief(
 
 
 def _load_config(*, dry_run: bool) -> Config:
-    """dry-run은 텔레그램으로 보내지 않으므로 봇 토큰 없이도 돈다. Claude 키는 여전히 필요하다."""
+    """dry-run은 텔레그램으로 보내지 않으므로 봇 토큰 없이도 돈다. Gemini 키는 여전히 필요하다."""
     cfg = load_config(require_secrets=not dry_run)
-    if dry_run and not cfg.anthropic_api_key:
-        raise ConfigError("필수 환경 변수가 없습니다: ANTHROPIC_API_KEY")
+    if dry_run and not cfg.gemini_api_key:
+        raise ConfigError("필수 환경 변수가 없습니다: GEMINI_API_KEY")
     return cfg
 
 
@@ -122,7 +122,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def _run(cfg: Config, args: argparse.Namespace) -> int:
-    client = Anthropic(api_key=cfg.anthropic_api_key)
+    client = make_client(cfg)
     now = datetime.now(timezone.utc)
     limit = args.limit if args.limit is not None else cfg.brief_item_count
 

@@ -18,7 +18,7 @@ def clean_env(monkeypatch):
 def set_required(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "bot-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "12345")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "api-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "api-key")
 
 
 def test_load_config_with_required_vars(clean_env):
@@ -29,7 +29,7 @@ def test_load_config_with_required_vars(clean_env):
     assert isinstance(config, Config)
     assert config.telegram_bot_token == "bot-token"
     assert config.telegram_chat_id == "12345"
-    assert config.anthropic_api_key == "api-key"
+    assert config.gemini_api_key == "api-key"
     assert config.github_token is None
     assert config.state_path == Path("state/seen.json")
     assert config.http_timeout == 20.0
@@ -43,7 +43,7 @@ def test_missing_required_vars_are_all_reported(clean_env):
 
     message = str(excinfo.value)
     assert "TELEGRAM_BOT_TOKEN" in message
-    assert "ANTHROPIC_API_KEY" in message
+    assert "GEMINI_API_KEY" in message
     assert "TELEGRAM_CHAT_ID" not in message
 
 
@@ -82,7 +82,7 @@ def test_require_secrets_false_skips_validation(clean_env):
 
     assert config.telegram_bot_token == ""
     assert config.telegram_chat_id == ""
-    assert config.anthropic_api_key == ""
+    assert config.gemini_api_key == ""
     assert config.brief_item_count == 5
 
 

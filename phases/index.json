@@ -1,5 +1,8 @@
 {
   "phases": [
-    { "dir": "daily-brief-mvp", "status": "pending" }
+    {
+      "dir": "daily-brief-mvp",
+      "status": "pending"
+    }
   ]
 }

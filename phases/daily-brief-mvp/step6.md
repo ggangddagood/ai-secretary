@@ -76,13 +76,13 @@ python -m secretary.main --dry-run --limit 5
 echo "exit=$?"
 ```
 
-마지막 명령은 실제 소스 + 실제 Claude API를 사용한다. `ANTHROPIC_API_KEY`가 필요하다. exit 0이어야 하고, 브리핑 5건(또는 후보가 적으면 그 이하)이 stdout에 출력되어야 한다.
+마지막 명령은 실제 소스 + 실제 Gemini API를 사용한다. `GEMINI_API_KEY`가 필요하다. exit 0이어야 하고, 브리핑 5건(또는 후보가 적으면 그 이하)이 stdout에 출력되어야 한다.
 
 ## 검증 절차
 
 1. 위 AC 커맨드를 실제로 실행한다. `--dry-run` 출력의 요약 3줄이 실제 원문 내용과 맞는지 링크 1~2개를 열어 눈으로 검증하라. 요약이 본문과 무관하면 step 4의 프롬프트 문제다.
 2. 확인한다: 발송 실패 시 `save_seen`이 호출되지 않는 테스트가 통과하는가 / 실패 경로에서도 항상 사용자에게 메시지가 가는가 / 로그만으로 실패 단계를 특정할 수 있는가.
-3. `ANTHROPIC_API_KEY`가 없어 AC를 실행할 수 없으면 step을 `blocked`로 표시하고 즉시 중단한다.
+3. `GEMINI_API_KEY`가 없어 AC를 실행할 수 없으면 step을 `blocked`로 표시하고 즉시 중단한다.
 4. 결과에 따라 `phases/daily-brief-mvp/index.json`의 step 6을 갱신한다.
 
 ## 금지사항

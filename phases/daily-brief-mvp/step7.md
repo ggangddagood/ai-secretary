@@ -26,7 +26,7 @@ permissions:
 
 - `ubuntu-latest`, Python 3.11 setup, pip 캐시
 - `pip install -e ".[dev]"` → `python -m secretary.main`
-- env: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ANTHROPIC_API_KEY`는 `${{ secrets.* }}`, `GITHUB_TOKEN`은 `${{ github.token }}`
+- env: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GEMINI_API_KEY`는 `${{ secrets.* }}`, `GITHUB_TOKEN`은 `${{ github.token }}`
 - 실행 후 `state/seen.json`이 변경되었으면 커밋 & 푸시:
   - `git config user.name/email`을 github-actions bot으로 설정
   - `git diff --quiet state/seen.json || (git add state/seen.json && git commit -m "chore: update seen state" && git push)`

@@ -13,27 +13,28 @@ from secretary.llm import (
 from secretary.models import Article, Item
 
 
-class FakeResponse:
-    def __init__(self, parsed):
-        self.parsed_output = parsed
-        self.stop_reason = "end_turn"
+class FakeInteraction:
+    def __init__(self, output_text):
+        self.output_text = output_text
+        self.status = "completed"
 
 
-class FakeMessages:
+class FakeInteractions:
     def __init__(self, outputs):
-        self._outputs = list(outputs)
+        # Gemini는 구조화 출력을 JSON 텍스트로 돌려준다 — 파싱까지 포함해 흉내 낸다.
+        self._outputs = [output.model_dump_json() for output in outputs]
         self.calls: list[dict] = []
 
-    def parse(self, **kwargs):
+    def create(self, **kwargs):
         self.calls.append(kwargs)
-        return FakeResponse(self._outputs.pop(0))
+        return FakeInteraction(self._outputs.pop(0))
 
 
 class FakeClient:
-    """`client.messages.parse(...)`만 흉내 낸다."""
+    """`client.interactions.create(...)`만 흉내 낸다."""
 
     def __init__(self, *outputs):
-        self.messages = FakeMessages(outputs)
+        self.interactions = FakeInteractions(outputs)
 
 
 def make_item(url: str, *, title: str = "제목", score: int | None = None) -> Item:
@@ -107,8 +108,8 @@ def test_summarize_excludes_body_less_items_from_the_llm_payload():
         [make_selection(with_body.item.url), make_selection(without_body.item.url)],
     )
 
-    assert len(client.messages.calls) == 1
-    payload = client.messages.calls[0]["messages"][0]["content"]
+    assert len(client.interactions.calls) == 1
+    payload = client.interactions.calls[0]["input"]
     assert "https://example.com/ok" in payload
     assert "https://example.com/paywalled" not in payload
 
@@ -119,7 +120,7 @@ def test_summarize_leaves_body_less_items_without_summary():
 
     entries = summarize(client, [without_body], [make_selection(without_body.item.url)])
 
-    assert client.messages.calls == []
+    assert client.interactions.calls == []
     assert entries[0].summary_ko == []
     assert entries[0].action_hint_ko is None
     assert entries[0].subtitle_ko == ""

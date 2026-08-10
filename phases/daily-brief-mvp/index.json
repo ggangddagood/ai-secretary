@@ -38,9 +38,9 @@
       "step": 4,
       "name": "llm-curate-summarize",
       "status": "completed",
-      "started_at": "2026-08-09T23:43:28+0900",
-      "completed_at": "2026-08-09T23:48:58+0900",
-      "summary": "secretary.llm — MODEL=claude-opus-5 상수 + curate(후보 40건·score순, 후보 밖 URL 폐기·count 절단)와 summarize(body=None은 LLM 페이로드에서 제외하고 summary_ko=[]/action_hint_ko=None으로 조립). 구조화 출력은 messages.parse(output_format=Pydantic) — output_config만 주면 parsed_output이 None이라 ENGINEERING_NOTES에 기록. pydantic 의존성 추가, 가짜 클라이언트 테스트 5건(총 46건)."
+      "started_at": "2026-08-10T23:27:52+0900",
+      "completed_at": "2026-08-10T23:44:41+0900",
+      "summary": "LLM 제공자를 Claude에서 Gemini로 교체 — secretary.llm이 google-genai의 interactions.create(response_format JSON 스키마)를 쓰고 make_client(cfg)로 키를 주입한다. curate/summarize 시그니처·프롬프트·동작 계약(후보 40건 절단, 후보 밖 URL 폐기, body=None 항목은 LLM에 미전송)은 그대로. config는 GEMINI_API_KEY로 전환. 테스트 61건 유지(verify.sh exit 0), 실제 Gemini 호출로 curate·summarize 양쪽 스키마 수용 확인."
     },
     {
       "step": 5,
@@ -53,10 +53,7 @@
     {
       "step": 6,
       "name": "pipeline",
-      "status": "blocked",
-      "started_at": "2026-08-09T23:54:50+0900",
-      "summary": "secretary.main — build_brief(수집→중복 제거→선별→본문 추출→요약, 단계별 건수 로깅)와 run(설정 로드→렌더링→발송→발송 성공 후에만 mark_seen/prune/save_seen). 실패 경로는 render_failure 발송 후 exit 1, 발송 실패만은 재발송 없이 exit 1. __main__.py 추가, 테스트 5건(총 61건). verify.sh exit 0.",
-      "blocked_reason": "AC 2번(`python -m secretary.main --dry-run --limit 5`)이 실제 Claude API를 호출하는데 실행 환경에 ANTHROPIC_API_KEY가 없어 exit 1(설정 오류)로 끝난다. 시크릿은 사용자만 주입할 수 있다. `ANTHROPIC_API_KEY=... python3 -m secretary.main --dry-run --limit 5`를 1회 실행해 exit 0과 요약 품질을 확인하면 completed로 전환 가능. LLM을 스텁으로 대체한 상태에서 수집 108건 → 선별 5건 → 본문 추출 5/5 → 렌더링까지는 실제 네트워크로 확인했다."
+      "status": "pending"
     },
     {
       "step": 7,

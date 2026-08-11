@@ -2,8 +2,8 @@
   "phases": [
     {
       "dir": "daily-brief-mvp",
-      "status": "blocked",
-      "blocked_at": "2026-08-11T00:00:40+0900"
+      "status": "completed",
+      "completed_at": "2026-08-11T23:14:59+0900"
     }
   ]
 }

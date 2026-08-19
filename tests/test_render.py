@@ -3,7 +3,8 @@
 from datetime import datetime, timezone
 
 from secretary.models import Brief, BriefEntry
-from secretary.render import TELEGRAM_LIMIT, render_brief, render_failure
+from secretary.render import render_brief, render_failure
+from secretary.tghtml import TELEGRAM_LIMIT
 
 GENERATED_AT = datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
 

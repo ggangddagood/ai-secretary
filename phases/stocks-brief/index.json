@@ -2,13 +2,49 @@
   "project": "ai-secretary",
   "phase": "stocks-brief",
   "steps": [
-    { "step": 0, "name": "shared-foundation", "status": "pending" },
-    { "step": 1, "name": "stocks-config-models", "status": "pending" },
-    { "step": 2, "name": "quotes", "status": "pending" },
-    { "step": 3, "name": "news", "status": "pending" },
-    { "step": 4, "name": "llm", "status": "pending" },
-    { "step": 5, "name": "render", "status": "pending" },
-    { "step": 6, "name": "pipeline-cli", "status": "pending" },
-    { "step": 7, "name": "ops-docs", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "shared-foundation",
+      "status": "completed",
+      "started_at": "2026-08-19T23:43:12+0900",
+      "summary": "텔레그램 HTML 공용 모듈 tghtml.py(TELEGRAM_LIMIT/KST/escape/attr/text/truncate/pack)와 Gemini 공용 모듈 gemini.py(MODEL/generate/make_client) 추출 — render.py·llm.py는 위임만 하고 telegram.send_messages는 TelegramTarget Protocol을 받는다. 동작 불변, 기존 67건 통과",
+      "completed_at": "2026-08-19T23:43:12+0900"
+    },
+    {
+      "step": 1,
+      "name": "stocks-config-models",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "quotes",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "news",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "llm",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "render",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "pipeline-cli",
+      "status": "pending"
+    },
+    {
+      "step": 7,
+      "name": "ops-docs",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-19T23:43:12+0900"
 }

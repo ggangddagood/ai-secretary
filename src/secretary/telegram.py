@@ -7,11 +7,10 @@ sendMessage 하나만 쓰므로 봇 프레임워크를 들이지 않는다.
 from __future__ import annotations
 
 import logging
-from typing import Final
+from typing import Final, Protocol
 
 import httpx
 
-from .config import Config
 from .http import make_client
 from .sources.base import describe_error
 
@@ -19,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 API_BASE: Final[str] = "https://api.telegram.org"
 MASKED_URL: Final[str] = f"{API_BASE}/bot***/sendMessage"
+
+
+class TelegramTarget(Protocol):
+    """발송에 필요한 설정만 요구한다 — `Config`와 `StocksConfig`가 모두 만족한다."""
+
+    telegram_bot_token: str
+    telegram_chat_id: str
+    http_timeout: float
 
 
 class TelegramError(Exception):
@@ -44,7 +51,7 @@ def _failure(response: httpx.Response) -> str | None:
     return f"HTTP {response.status_code}: {description or '응답을 읽지 못했습니다'}"
 
 
-def send_messages(cfg: Config, messages: list[str]) -> None:
+def send_messages(cfg: TelegramTarget, messages: list[str]) -> None:
     """메시지를 순서대로 발송한다. 하나라도 실패하면 예외를 올린다.
 
     중간에 실패해도 성공으로 처리하지 않는다 — 발송 기록이 갱신되면 실패한 항목이

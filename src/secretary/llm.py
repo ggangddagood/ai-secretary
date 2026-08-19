@@ -2,25 +2,22 @@
 
 두 단계를 한 번의 호출로 합치지 않는다. 제목만 보고 요약하면 모델이 내용을 지어낸다.
 요약의 근거는 step 3이 추출한 본문뿐이며, 본문이 없는 항목은 아예 모델에 보내지 않는다.
-
-출력 스키마는 `response_format`으로만 전달한다. 프롬프트에 스키마나 예시 JSON을 다시 적으면
-스키마가 중복 전달되어 출력 품질이 떨어진다(Gemini 문서가 경고하는 안티패턴).
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Final, Literal, TypeVar
+from typing import Final, Literal
 
 from google import genai
 from pydantic import BaseModel
 
 from .config import Config
+from .gemini import generate
+from .gemini import make_client as make_gemini_client
 from .models import Article, BriefEntry, Item
 
 logger = logging.getLogger(__name__)
-
-MODEL: Final[str] = "gemini-3.6-flash"
 
 MAX_CANDIDATES: Final[int] = 40
 HINT_CHARS: Final[int] = 200
@@ -77,31 +74,9 @@ class SummaryResult(BaseModel):
     summaries: list[SummaryOut]
 
 
-T = TypeVar("T", bound=BaseModel)
-
-
 def make_client(cfg: Config) -> genai.Client:
     """API 키는 config를 거쳐 명시적으로 넘긴다 — SDK가 환경 변수를 직접 읽게 두지 않는다."""
-    return genai.Client(api_key=cfg.gemini_api_key)
-
-
-def _generate(client: genai.Client, system: str, user: str, expected: type[T]) -> T:
-    """JSON 스키마를 강제해 호출하고 응답을 파싱한다. 비어 있으면(거부·잘림 등) 예외로 알린다."""
-    interaction = client.interactions.create(
-        model=MODEL,
-        system_instruction=system,
-        input=user,
-        response_format={
-            "type": "text",
-            "mime_type": "application/json",
-            "schema": expected.model_json_schema(),
-        },
-    )
-    text = getattr(interaction, "output_text", None)
-    if not text:
-        status = getattr(interaction, "status", None)
-        raise RuntimeError(f"{MODEL} 구조화 응답을 읽지 못했습니다 (status={status})")
-    return expected.model_validate_json(text)
+    return make_gemini_client(cfg.gemini_api_key)
 
 
 def _format_candidate(item: Item) -> str:
@@ -116,7 +91,7 @@ def curate(client: genai.Client, candidates: list[Item], *, count: int) -> list[
     ranked = sorted(candidates, key=lambda item: item.score or 0, reverse=True)[:MAX_CANDIDATES]
     listing = "\n\n".join(_format_candidate(item) for item in ranked)
 
-    result = _generate(
+    result = generate(
         client,
         CURATE_SYSTEM,
         f"오늘 후보 {len(ranked)}건이다. 이 중 {count}건을 골라라.\n\n{listing}",
@@ -180,7 +155,7 @@ def summarize(
     summaries: dict[str, SummaryOut] = {}
     if with_body:
         payload = "\n\n---\n\n".join(_format_article(article) for article in with_body)
-        result = _generate(
+        result = generate(
             client,
             SUMMARIZE_SYSTEM,
             f"항목 {len(with_body)}건을 요약해라.\n\n{payload}",

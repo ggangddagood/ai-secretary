@@ -16,7 +16,7 @@
       "status": "completed",
       "started_at": "2026-08-19T23:45:29+0900",
       "summary": "주식 파이프라인 설정·데이터 구조 — secretary/stocks/models.py(Ticker/Quote/Headline/StockEntry/StockBrief + MARKET_INDICES/FX_SYMBOL/MARKET_TZ/MARKET_LABELS, secretary 모듈 무의존)와 config.py의 StocksConfig/parse_watchlist/load_stocks_config 추가. 기존 Config/load_config 불변, 테스트 79건 통과",
-      "completed_at": "2026-08-19T23:47:09+0900"
+      "completed_at": "2026-08-19T23:47:24+0900"
     },
     {
       "step": 2,

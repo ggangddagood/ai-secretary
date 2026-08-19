@@ -1,0 +1,36 @@
+name: stocks-us
+
+on:
+  schedule:
+    # UTC 월~금 22:00 = KST 화~토 07:00. 미국장은 KST 새벽에 마감하므로 UTC 요일과
+    # KST 요일이 하루 어긋난다 — UTC 금요일 실행이 KST 토요일 07:00에 미국 금요일장 종가를 보낸다.
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch:
+
+# 상태 파일을 쓰지 않는다 — 커밋할 것이 없으므로 읽기 권한이면 충분하다.
+permissions:
+  contents: read
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Send US stock brief
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # 관심 종목은 시크릿이 아니다 — Variables다. 마스킹되지 않아 로그로 확인할 수 있다.
+          STOCKS_WATCHLIST_US: ${{ vars.STOCKS_WATCHLIST_US }}
+        run: python -m secretary.stocks --market us

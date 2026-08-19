@@ -61,7 +61,10 @@
     {
       "step": 7,
       "name": "ops-docs",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-20T00:09:14+0900",
+      "summary": "워크플로와 문서 — .github/workflows/stocks-us.yml(0 22 * * 1-5 UTC = KST 화~토 07:00)와 stocks-kr.yml(0 7 * * 1-5 UTC = KST 월~금 16:00) 신설(contents: read, 상태 커밋·concurrency 없음, 관심 종목은 vars.STOCKS_WATCHLIST_*). daily.yml 무수정. 문서 8개 갱신 — ARCHITECTURE(흐름 2개 + stocks/·공용 모듈 트리), BUSINESS_RULES(주가 브리핑 규칙 절 신설, 104줄 순수 추가), STANDARDS(stocks/ 모듈 경계 + dry-run 게이트), SECURITY(Variables는 시크릿이 아니라 프라이버시 결정), OPERATIONS(관심 종목 등록 절차·심볼 찾는 법·워크플로 3개 시각표·환경 변수 3종), DECISIONS(ADR-007~009), ENGINEERING_NOTES(함정 4개 + 관심 종목 추가/교체 체크리스트), AGENTS/README/STATUS. 검증: verify.sh exit 0(128 passed), stocks dry-run us/kr exit 0, 기존 main dry-run 회귀 exit 0",
+      "completed_at": "2026-08-20T00:26:40+0900"
     }
   ],
   "created_at": "2026-08-19T23:43:12+0900"

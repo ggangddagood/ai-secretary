@@ -9,6 +9,11 @@
   테스트가 네트워크에 나가면 안 된다.
 - 소스·발송·시크릿 취급을 바꿨으면 `python -m secretary.main --dry-run` exit 0까지 확인한다.
   단위 테스트는 실제 피드가 죽은 것을 잡지 못한다.
+- `stocks/`를 바꿨으면 `python -m secretary.stocks --market us --dry-run` 과
+  `--market kr --dry-run` 이 각각 exit 0인지 확인한다. 같은 이유다 — Yahoo·Google News가
+  응답을 바꾼 것은 단위 테스트가 잡지 못한다.
+- 공용 모듈(`tghtml`, `gemini`, `telegram`, `http`, `config`)을 바꿨으면 두 파이프라인의
+  dry-run을 모두 확인한다. 한쪽만 보면 다른 쪽 회귀를 놓친다.
 
 ## 모듈 경계
 
@@ -20,6 +25,16 @@
 - SDK가 환경 변수를 직접 읽게 두지 않는다. Gemini 클라이언트는 `make_client(cfg)`로 키를 주입한다.
 - `main.py`는 순서와 실패 정책만 정한다. 도메인 로직을 여기 두지 않는다.
 - 외부 HTTP는 `http.make_client(timeout)`을 쓴다. 모듈마다 `httpx.Client`를 새로 조립하지 않는다.
+- `stocks/`는 `secretary.main`·`sources`의 수집 계층(`hackernews`/`geeknews`/`github`/`rss`/
+  `collect_all`)·`state`·`extract`를 import 하지 않는다. 쓸 수 있는 것은 공용 모듈
+  (`config`, `http`, `log`, `telegram`, `tghtml`, `gemini`)과 `sources.base`의 순수
+  헬퍼(`describe_error`, `parse_feed`)뿐이다 — 이유: 두 파이프라인은 도메인이 겹치지 않는다.
+  한쪽 도메인 코드를 다른 쪽에서 가져다 쓰기 시작하면 독립성이 조용히 사라진다.
+- 반대 방향도 금지한다. AI 브리핑 쪽 모듈은 `stocks/`를 import 하지 않는다. 예외는
+  `config.py`가 `stocks.models`에서 `Ticker`·`MARKETS`를 가져가는 것 하나뿐이다.
+- `stocks/models.py`는 다른 `secretary` 모듈을 import 하지 않는다. `config.py`가 이 모듈을
+  쓰므로 반대 방향 의존이 생기면 순환한다.
+- `stocks/__init__.py`에서 하위 모듈을 import 하지 않는다. 같은 순환 때문이다.
 
 ## 실패 처리
 

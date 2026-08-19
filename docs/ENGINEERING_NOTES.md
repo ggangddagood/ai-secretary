@@ -66,6 +66,58 @@
 - 원인: Threads 키워드 검색은 Meta App Review + 비즈니스 인증을 요구한다. Reddit은 신규 OAuth 앱이 수동 승인 대기에 걸린다는 보고가 반복된다. 둘 다 코드 문제가 아니라 심사 문제다.
 - 대응: 승인 없이 즉시 동작하는 소스만 쓴다(HN Algolia, GeekNews, GitHub Search, 공개 RSS). 소셜을 추가하려면 심사 소요를 별도 작업으로 잡는다.
 
+### `meta.chartPreviousClose` 는 직전 거래일 종가가 아니다
+
+- 증상: 등락률이 예외도 경고도 없이 틀린다. 숫자가 그럴듯해서 브리핑을 읽어도 눈치채기 어렵다.
+- 원인: Yahoo v8 chart의 `meta.chartPreviousClose` 는 **조회 창이 시작되기 이전**의 종가다.
+  `range=1mo` 로 부르면 한 달 전 근처의 값이 온다. 실측에서 삼성전자(`005930.KS`)의
+  `chartPreviousClose` 는 239500이었는데 실제 직전 거래일 종가는 268500이었다 — 이 값으로
+  계산하면 등락률이 +12%로 나간다.
+- 대응: `indicators.quote[0].close` 배열에서 `None` 을 제거한 **유효값의 마지막 두 개**로만
+  계산한다(`stocks/quotes.py:parse_chart`). `meta` 에서는 타임존과 통화만 읽는다.
+- 검증: `tests/test_stocks_quotes.py::test_change_pct_ignores_chart_previous_close` 가 실측값
+  그대로(`chartPreviousClose=239500`, 직전 종가 268500) 회귀를 잡는다. 새 필드를 `meta` 에서
+  읽고 싶어지면 그 값이 조회 창의 **안**을 가리키는지부터 확인한다.
+
+### Yahoo chart의 `close` 배열에는 `None` 이 섞인다 — 마지막 원소에도 들어온다
+
+- 증상: `closes[-1]` 로 최신 종가를 읽는 코드가 `TypeError` 로 죽거나, 등락률이 `None` 이 된다.
+- 원인: 거래가 없었거나 데이터가 아직 채워지지 않은 구간이 `None` 으로 온다. 중간에만 오는 것이
+  아니다 — 실측에서 `USDKRW=X` 는 배열 중간에, `035720.KQ`(코스닥)는 **마지막 원소**가
+  `None` 이었다. 길이는 `timestamp` 배열과 같으므로 인덱스로 짝지으려면 `None` 위치를 알아야 한다.
+- 대응: `(timestamp, close)` 를 짝지은 뒤 `close is None` 인 쌍을 버리고, 남은 유효값이 2개
+  이상일 때만 등락률을 만든다. 2개 미만이면 그 심볼은 조회 실패로 처리한다. 기준일도 버리기
+  전 인덱스가 아니라 **살아남은 마지막 쌍의 timestamp** 로 잡는다.
+- 검증: `tests/test_stocks_quotes.py::test_parse_chart_skips_trailing_none_close` (마지막 원소),
+  `::test_parse_chart_skips_none_in_the_middle` (중간),
+  `::test_parse_chart_returns_none_with_single_valid_close` (유효값 부족).
+
+### Yahoo v8 chart는 이 프로젝트의 User-Agent를 거부하지 않는다
+
+- 증상: 시세 API를 붙일 때 "브라우저 User-Agent로 위장해야 한다"는 조언을 먼저 만나게 된다.
+- 원인: 그 조언은 대부분 `v7/finance/quote` 엔드포인트 이야기다. 그쪽은 실제로 크리덴셜(crumb)과
+  브라우저 헤더를 요구하도록 막혔다. `v8/finance/chart` 는 아직 그렇지 않다.
+- 대응: 계획 단계에서 6개 심볼(미국 주식·한국 주식·지수·환율)을 기본 User-Agent
+  `ai-secretary/0.1` 로 호출해 전부 HTTP 200을 받았다. 그래서 `http.make_client` 를 그대로 쓴다 —
+  위장 헤더를 넣지 않는다. v7/quote로 갈아타지 않는다.
+- 검증: 막힌 것 같으면 헤더를 바꾸기 전에 `curl -s -o /dev/null -w '%{http_code}'
+  'https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d'` 로 상태
+  코드부터 본다. 429면 차단이지 UA 문제가 아니다.
+
+### 미국장 워크플로의 cron 요일은 KST 요일과 하루 어긋난다
+
+- 증상: `stocks-us.yml` 의 `0 22 * * 1-5` 를 보고 "월~금 발송"으로 읽는다. 토요일 아침에 도착한
+  브리핑을 보고 cron이 잘못됐다고 판단해 고치려 든다.
+- 원인: cron의 요일 필드도 **UTC** 기준이다. 미국장은 KST 새벽 05~06시에 마감하므로 UTC 22:00은
+  이미 KST 다음 날 07:00이다. `0 22 * * 1-5`(UTC 월~금)는 **KST 화~토 07:00**에 돌고, 각 실행이
+  다루는 것은 그 전날 미국장 종가다. UTC 금요일 실행이 KST 토요일에 미국 금요일장을 보내는 것이
+  정상 동작이다. (한국장 `stocks-kr.yml` 의 `0 7 * * 1-5` 는 KST 월~금 16:00으로 요일이 같다 —
+  두 파일이 같은 규칙일 것이라고 넘겨짚으면 안 된다.)
+- 대응: 두 워크플로의 cron 위에 UTC↔KST 요일 대응을 주석으로 남겨 뒀다. 요일 필드를 KST 기준으로
+  고치면 미국 금요일장 브리핑이 통째로 사라진다.
+- 검증: `docs/OPERATIONS.md` 의 "발송 시각 변경" 표가 세 워크플로의 UTC cron과 KST 실행 시각을
+  나란히 적고 있다. cron을 바꾸면 그 표도 함께 고친다.
+
 ### 확인된 죽은/제외 피드
 
 추가 후보를 검토할 때 다시 시도하지 않도록 남긴다. 판단 근거는 위 "죽은 RSS 피드" 항목의 검증법.
@@ -96,3 +148,27 @@
 1. 후보 URL을 실제로 GET → 검증: HTTP 200이면서 `feedparser.parse(r.content).entries`가 1건 이상
 2. `sources/rss.py`의 `RSS_FEEDS`에 `(표시명, URL)` 추가 → 검증: `bash scripts/verify.sh` exit 0 (`test_rss_keeps_reading_after_one_feed_fails`가 피드 수에 연동됨)
 3. 제외한 후보가 있으면 사유를 `docs/tracking/FINDINGS.md`에 기록
+
+### 관심 종목 추가/교체
+
+1. Yahoo Finance에서 종목을 검색해 URL의 심볼을 확인한다(한국은 코스피 `.KS` / 코스닥 `.KQ`)
+   → 검증: v8 chart를 실제로 호출해 HTTP 200이고 `close` 유효값이 2개 이상인지 본다
+
+   ```bash
+   python3 -c "
+   import httpx
+   sym = '005930.KS'
+   r = httpx.get(f'https://query1.finance.yahoo.com/v8/finance/chart/{sym}',
+                 params={'range': '1mo', 'interval': '1d'}, timeout=20)
+   res = r.json()['chart']['result'][0]
+   closes = [c for c in res['indicators']['quote'][0]['close'] if c is not None]
+   print(r.status_code, res['meta']['currency'], '유효 종가', len(closes), closes[-2:])
+   "
+   ```
+
+2. `gh variable set STOCKS_WATCHLIST_US --body "..."` (Secrets가 아니라 Variables다)
+   → 검증: `gh variable list` 에 이름과 값이 보인다
+3. 검증: `STOCKS_WATCHLIST_US="심볼:표시명" python -m secretary.stocks --market us --dry-run`
+   exit 0 이고, 출력에 그 종목이 보인다
+4. 표시명은 급등락 해설의 **뉴스 검색어**로 쓰인다. 너무 일반적인 단어(예: `애플`)면 무관한
+   기사가 섞일 수 있다 — 급등락이 실제로 잡힌 날 헤드라인이 그 종목 이야기인지 확인한다

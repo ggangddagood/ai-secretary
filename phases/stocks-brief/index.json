@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "pipeline-cli",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-19T23:57:07+0900",
+      "summary": "주식 파이프라인 배선과 CLI — secretary/stocks/main.py의 build_stock_brief(지수·관심 종목 시세 조회 → 환율 제외 as_of 최댓값으로 기준일·휴장 판정 → move_threshold 이상만 급등락 → 급등락이 있을 때만 뉴스 수집·해설 → StockEntry 조립, 헤드라인 없는 종목의 comment_ko는 항상 None)와 run/_run/_notify_failure. 실패 정책: 생성 실패는 실패 알림 후 exit 1, LLM 실패는 warning 후 해설 없이 발송, 텔레그램 발송 실패는 알림 없이 exit 1, 상태 파일 없음. CLI는 --market 필수(choices=MARKETS, 누락·오입력 시 exit 2) + --dry-run/--verbose, __main__.py 신설. 테스트 10건 신설(총 128건 통과), dry-run us/kr 및 기존 main 회귀 exit 0",
+      "completed_at": "2026-08-20T00:09:00+0900"
     },
     {
       "step": 7,

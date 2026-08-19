@@ -48,7 +48,7 @@
       "status": "completed",
       "started_at": "2026-08-19T23:54:03+0900",
       "summary": "주식 브리핑 텔레그램 렌더링 — secretary/stocks/render.py의 render_stock_brief(헤더=시장명·KST 발송일·기준일+휴장 표기, 지수/관심 종목/급등락 블록을 tghtml.pack에 넘겨 4096자 분할, 빈 절은 블록 자체 생략, 해설 없는 종목은 헤드라인만)와 render_failure(market, reason). 숫자 포맷은 지수·환율 소수 2자리 / KRW 종목 정수 / 등락률 부호+방향(▲▼–), 이스케이프는 tghtml.text·attr 위임. 테스트 13건 신설(총 118건 통과)",
-      "completed_at": "2026-08-19T23:56:40+0900"
+      "completed_at": "2026-08-19T23:57:07+0900"
     },
     {
       "step": 6,

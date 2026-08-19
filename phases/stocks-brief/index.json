@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "news",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-19T23:49:53+0900",
+      "summary": "급등락 종목 뉴스 헤드라인 수집 — secretary/stocks/news.py의 fetch_headlines(Google News RSS, 검색어는 ticker.label, 시장별 hl/gl/ceid, 최근 3일·최신순 최대 5건)와 fetch_headlines_for(클라이언트 하나로 순차 처리, 0건 종목도 키 유지). 본문 미추출, 모든 실패는 warning 후 빈 리스트로 흡수. 픽스처 2종 + 테스트 9건 신설(총 100건 통과), 실호출 스모크 2종목 각 5건 확인",
+      "completed_at": "2026-08-19T23:52:39+0900"
     },
     {
       "step": 4,

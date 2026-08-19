@@ -40,7 +40,7 @@
       "status": "completed",
       "started_at": "2026-08-19T23:52:59+0900",
       "summary": "급등락 해설 생성 — secretary/stocks/llm.py의 explain_moves(헤드라인이 있는 종목만 한 번의 호출로 묶어 해설, 헤드라인 0건이면 호출 자체를 하지 않고 빈 dict, 프롬프트에 없던 심볼의 해설은 warning 후 폐기, 호출 실패는 예외 그대로 전파)와 CommentOut/CommentResult 스키마 + 투자 판단 금지 시스템 프롬프트. 테스트 5건 신설(총 105건 통과)",
-      "completed_at": "2026-08-19T23:54:03+0900"
+      "completed_at": "2026-08-19T23:54:15+0900"
     },
     {
       "step": 5,

@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "quotes",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-19T23:47:24+0900",
+      "summary": "Yahoo Finance v8 chart 시세 조회 — secretary/stocks/quotes.py의 fetch_quotes(심볼별 순차 GET, 실패 심볼은 warning 후 건너뜀, 입력 순서 유지)와 parse_chart(close 배열의 None 제거 후 유효값 마지막 두 개로 등락률 계산, chartPreviousClose 미사용, as_of는 exchangeTimezoneName 기준 날짜). 테스트 12건 신설(총 91건 통과), 실호출 스모크 3/3 성공",
+      "completed_at": "2026-08-19T23:52:00+0900"
     },
     {
       "step": 3,

@@ -12,7 +12,8 @@
     },
     {
       "dir": "stocks-52w-high",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-08-20T23:15:33+0900"
     }
   ]
 }

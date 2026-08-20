@@ -7,7 +7,8 @@
       "name": "quotes-52w",
       "status": "completed",
       "started_at": "2026-08-20T22:55:34+0900",
-      "summary": "Quote에 drawdown_pct/range_pct(기본값 None) 추가, quotes.fifty_two_week가 meta.fiftyTwoWeekHigh/Low로 52주 고점 대비 하락률과 범위 내 위치(0~100 클램프)를 계산해 parse_chart가 채운다. 52주 값 부재는 조회 실패가 아니다. 테스트 10건 추가"
+      "summary": "Quote에 drawdown_pct/range_pct(기본값 None) 추가, quotes.fifty_two_week가 meta.fiftyTwoWeekHigh/Low로 52주 고점 대비 하락률과 범위 내 위치(0~100 클램프)를 계산해 parse_chart가 채운다. 52주 값 부재는 조회 실패가 아니다. 테스트 10건 추가",
+      "completed_at": "2026-08-20T22:57:35+0900"
     },
     {
       "step": 1,

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import urllib.parse
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
@@ -57,9 +57,9 @@ def _fetch_one(client: httpx.Client, ticker: Ticker) -> Quote | None:
 def parse_chart(payload: dict[str, Any], ticker: Ticker) -> Quote | None:
     """chart 응답에서 최신 종가와 등락률을 뽑는다. 읽을 수 없으면 None.
 
-    등락률은 `close` 배열에서 None을 제거한 유효값의 마지막 두 개로 계산한다.
+    최신가·직전가·기준일은 `latest_and_previous`가 정한다.
     `meta.chartPreviousClose`는 조회 창 시작 *이전*의 종가라 직전 거래일 종가가 아니다 —
-    쓰면 예외 없이 그럴듯한 숫자로 틀린다.
+    쓰면 예외 없이 그럴듯한 숫자로 틀린다. `regularMarketPrice`와 혼동하지 않는다.
     """
     try:
         chart = payload["chart"]
@@ -68,24 +68,24 @@ def parse_chart(payload: dict[str, Any], ticker: Ticker) -> Quote | None:
             return None
         result = chart["result"][0]
         meta = result["meta"]
-        pairs = [
-            (ts, close)
-            for ts, close in zip(result["timestamp"], result["indicators"]["quote"][0]["close"])
-            if close is not None
-        ]
-        if len(pairs) < 2:
-            logger.warning("유효 종가가 부족합니다 %s: %d건", ticker.symbol, len(pairs))
+        resolved = latest_and_previous(
+            meta,
+            result["timestamp"],
+            result["indicators"]["quote"][0]["close"],
+            ZoneInfo(meta["exchangeTimezoneName"]),
+        )
+        if resolved is None:
+            logger.warning("최신·직전 종가를 정할 수 없습니다 %s", ticker.symbol)
             return None
-        (latest_ts, latest), (_, prev) = pairs[-1], pairs[-2]
+        as_of, price, prev = resolved
         if prev == 0:
             logger.warning("직전 종가가 0입니다 %s", ticker.symbol)
             return None
-        as_of = datetime.fromtimestamp(latest_ts, tz=ZoneInfo(meta["exchangeTimezoneName"])).date()
-        drawdown_pct, range_pct = fifty_two_week(meta, float(latest))
+        drawdown_pct, range_pct = fifty_two_week(meta, price)
         return Quote(
             ticker=ticker,
-            price=float(latest),
-            change_pct=(float(latest) - float(prev)) / float(prev) * 100,
+            price=price,
+            change_pct=(price - prev) / prev * 100,
             currency=meta["currency"],
             as_of=as_of,
             drawdown_pct=drawdown_pct,
@@ -94,6 +94,55 @@ def parse_chart(payload: dict[str, Any], ticker: Ticker) -> Quote | None:
     except (KeyError, IndexError, TypeError) as exc:
         logger.warning("시세 응답을 읽을 수 없습니다 %s: %s", ticker.symbol, describe_error(exc))
         return None
+
+
+def latest_and_previous(
+    meta: dict[str, Any],
+    timestamps: list[int],
+    closes: list[float | None],
+    tz: ZoneInfo,
+) -> tuple[date, float, float] | None:
+    """(기준일, 최신가, 직전 종가). 정할 수 없으면 None.
+
+    장 마감 직후에는 `close` 배열의 그날 bar가 아직 None인 구간이 있다(실측: 005930.KS의
+    8/20 bar). 그래서 `meta.regularMarketPrice`/`regularMarketTime`이 아는 확정 종가를
+    먼저 쓰고, 읽을 수 없으면 `close` 유효값 마지막 두 개로 폴백한다.
+
+    직전 종가는 어느 경로에서든 `close` 배열에서만 온다 — `meta`에 직전 거래일 종가로
+    믿을 수 있는 필드가 없다.
+    """
+    pairs = [(ts, close) for ts, close in zip(timestamps, closes) if close is not None]
+    from_meta = _from_meta(meta, pairs, tz)
+    if from_meta is not None:
+        return from_meta
+    if len(pairs) < 2:
+        return None
+    (latest_ts, latest), (_, prev) = pairs[-1], pairs[-2]
+    return (datetime.fromtimestamp(latest_ts, tz=tz).date(), float(latest), float(prev))
+
+
+def _from_meta(
+    meta: dict[str, Any],
+    pairs: list[tuple[int, float]],
+    tz: ZoneInfo,
+) -> tuple[date, float, float] | None:
+    """`meta`의 확정 종가로 (기준일, 최신가, 직전 종가)를 만든다. 못 만들면 None.
+
+    직전 종가는 기준일보다 **이전 날짜**의 마지막 유효 종가다. 그냥 마지막 유효값을 쓰면,
+    `close`에 최신 종가가 이미 들어 있는 미국장에서 최신가와 같은 날이 되어 등락률이 0이 된다.
+    """
+    raw_price, raw_time = meta.get("regularMarketPrice"), meta.get("regularMarketTime")
+    if raw_price is None or raw_time is None:
+        return None
+    try:
+        price = float(raw_price)
+        as_of = datetime.fromtimestamp(raw_time, tz=tz).date()
+    except (TypeError, ValueError, OSError):
+        return None
+    earlier = [close for ts, close in pairs if datetime.fromtimestamp(ts, tz=tz).date() < as_of]
+    if not earlier:
+        return None
+    return (as_of, price, float(earlier[-1]))
 
 
 def fifty_two_week(meta: dict[str, Any], price: float) -> tuple[float | None, float | None]:

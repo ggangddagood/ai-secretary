@@ -2,13 +2,19 @@
 
 import urllib.parse
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
 
 from secretary.stocks import quotes as quotes_module
 from secretary.stocks.models import Ticker
-from secretary.stocks.quotes import fetch_quotes, fifty_two_week, parse_chart
+from secretary.stocks.quotes import (
+    fetch_quotes,
+    fifty_two_week,
+    latest_and_previous,
+    parse_chart,
+)
 
 APPLE = Ticker("AAPL", "애플")
 SAMSUNG = Ticker("005930.KS", "삼성전자")
@@ -181,6 +187,181 @@ def test_change_pct_ignores_chart_previous_close():
     assert quote is not None
     assert quote.change_pct == pytest.approx((271000.0 - 268500.0) / 268500.0 * 100)
     assert quote.change_pct != pytest.approx((271000.0 - 239500.0) / 239500.0 * 100)
+
+
+# --- latest_and_previous (meta.regularMarketPrice 경로) -------------------
+
+# 2026-08-18/19/20 09:00 Asia/Seoul (= 전날 00:00 UTC)
+KST_DAY1 = int(datetime(2026, 8, 18, 0, 0, tzinfo=timezone.utc).timestamp())
+KST_DAY2 = int(datetime(2026, 8, 19, 0, 0, tzinfo=timezone.utc).timestamp())
+KST_DAY3 = int(datetime(2026, 8, 20, 0, 0, tzinfo=timezone.utc).timestamp())
+# 2026-08-20 15:30:20 Asia/Seoul — 실측 regularMarketTime(정규 마감)
+KST_CLOSE_DAY3 = int(datetime(2026, 8, 20, 6, 30, 20, tzinfo=timezone.utc).timestamp())
+
+
+def test_parse_chart_uses_meta_price_when_last_close_is_none():
+    """실측 재현: 8/20 close bar가 None인데 meta는 확정 종가 271000을 안다."""
+    payload = chart_payload(
+        timestamps=[KST_DAY1, KST_DAY2, KST_DAY3],
+        closes=[268500.0, 247500.0, None],
+        tz="Asia/Seoul",
+        currency="KRW",
+        meta_extra={"regularMarketPrice": 271000.0, "regularMarketTime": KST_CLOSE_DAY3},
+    )
+
+    quote = parse_chart(payload, SAMSUNG)
+
+    assert quote is not None
+    assert quote.price == 271000.0
+    assert quote.change_pct == pytest.approx(9.49, abs=0.01)
+    assert quote.as_of == date(2026, 8, 20)
+
+
+def test_parse_chart_takes_previous_from_an_earlier_day_when_close_has_latest():
+    """실측 재현(QQQ): close에 최신 종가가 이미 있어도 직전가는 그 전날에서 온다."""
+    # 2026-08-20 11:14 America/New_York
+    market_time = int(datetime(2026, 8, 20, 15, 14, tzinfo=timezone.utc).timestamp())
+    payload = chart_payload(
+        timestamps=[DAY3, DAY4],
+        closes=[716.08, 712.105],
+        meta_extra={"regularMarketPrice": 712.105, "regularMarketTime": market_time},
+    )
+
+    quote = parse_chart(payload, APPLE)
+
+    assert quote is not None
+    assert quote.price == 712.105
+    assert quote.change_pct == pytest.approx(-0.55, abs=0.01)
+    assert quote.as_of == date(2026, 8, 20)
+
+
+def test_parse_chart_falls_back_without_regular_market_price():
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[100.0, 110.0],
+        meta_extra={"regularMarketTime": DAY2},
+    )
+
+    quote = parse_chart(payload, APPLE)
+
+    assert quote is not None
+    assert quote.price == 110.0
+    assert quote.change_pct == pytest.approx(10.0)
+    assert quote.as_of == date(2026, 8, 18)
+
+
+def test_parse_chart_falls_back_without_regular_market_time():
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[100.0, 110.0],
+        meta_extra={"regularMarketPrice": 999.0},
+    )
+
+    quote = parse_chart(payload, APPLE)
+
+    assert quote is not None
+    assert quote.price == 110.0
+    assert quote.change_pct == pytest.approx(10.0)
+
+
+def test_parse_chart_falls_back_on_non_numeric_meta_values():
+    """문자열이 와도 예외를 올리지 않는다."""
+    non_numeric_price = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[100.0, 110.0],
+        meta_extra={"regularMarketPrice": "N/A", "regularMarketTime": DAY2},
+    )
+    non_numeric_time = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[100.0, 110.0],
+        meta_extra={"regularMarketPrice": 999.0, "regularMarketTime": "16:00"},
+    )
+
+    for payload in (non_numeric_price, non_numeric_time):
+        quote = parse_chart(payload, APPLE)
+        assert quote is not None
+        assert quote.price == 110.0
+        assert quote.change_pct == pytest.approx(10.0)
+
+
+def test_parse_chart_falls_back_without_an_earlier_valid_close():
+    """as_of 이전 날짜의 유효 종가가 하나도 없으면 폴백한다."""
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[100.0, 110.0],
+        meta_extra={"regularMarketPrice": 999.0, "regularMarketTime": DAY1},
+    )
+
+    quote = parse_chart(payload, APPLE)
+
+    assert quote is not None
+    assert quote.price == 110.0
+    assert quote.as_of == date(2026, 8, 18)
+
+
+def test_parse_chart_returns_none_when_fallback_has_too_few_valid_closes():
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[None, 100.0],
+        meta_extra={"regularMarketPrice": 110.0, "regularMarketTime": DAY2},
+    )
+
+    assert parse_chart(payload, APPLE) is None
+
+
+def test_parse_chart_returns_none_when_meta_path_previous_close_is_zero():
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[0.0, None],
+        meta_extra={"regularMarketPrice": 110.0, "regularMarketTime": DAY2},
+    )
+
+    assert parse_chart(payload, APPLE) is None
+
+
+def test_parse_chart_computes_fifty_two_week_from_meta_path_price():
+    """52주 지표는 meta 경로가 정한 price(271000) 기준이다 — 폴백가(247500)가 아니다."""
+    payload = chart_payload(
+        timestamps=[KST_DAY1, KST_DAY2, KST_DAY3],
+        closes=[268500.0, 247500.0, None],
+        tz="Asia/Seoul",
+        currency="KRW",
+        meta_extra={
+            "regularMarketPrice": 271000.0,
+            "regularMarketTime": KST_CLOSE_DAY3,
+            "fiftyTwoWeekHigh": 374500.0,
+            "fiftyTwoWeekLow": 67500.0,
+        },
+    )
+
+    quote = parse_chart(payload, SAMSUNG)
+
+    assert quote is not None
+    assert quote.drawdown_pct == pytest.approx(-27.64, abs=0.01)
+    assert quote.range_pct == pytest.approx(66.29, abs=0.01)
+
+
+def test_latest_and_previous_never_takes_previous_from_meta():
+    """직전 종가는 언제나 close 배열에서 온다 — chartPreviousClose를 쓰지 않는다."""
+    meta = {
+        "regularMarketPrice": 271000.0,
+        "regularMarketTime": KST_CLOSE_DAY3,
+        "chartPreviousClose": 239500.0,
+    }
+
+    resolved = latest_and_previous(
+        meta, [KST_DAY1, KST_DAY2, KST_DAY3], [268500.0, 247500.0, None], ZoneInfo("Asia/Seoul")
+    )
+
+    assert resolved == (date(2026, 8, 20), 271000.0, 247500.0)
+
+
+def test_latest_and_previous_falls_back_to_last_two_valid_closes():
+    resolved = latest_and_previous(
+        {}, [KST_DAY1, KST_DAY2, KST_DAY3], [268500.0, 247500.0, None], ZoneInfo("Asia/Seoul")
+    )
+
+    assert resolved == (date(2026, 8, 19), 247500.0, 268500.0)
 
 
 # --- fifty_two_week ------------------------------------------------------

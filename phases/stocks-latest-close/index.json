@@ -2,7 +2,19 @@
   "project": "ai-secretary",
   "phase": "stocks-latest-close",
   "steps": [
-    { "step": 0, "name": "latest-close", "status": "pending" },
-    { "step": 1, "name": "docs", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "latest-close",
+      "status": "completed",
+      "started_at": "2026-08-21T00:23:58+0900",
+      "summary": "parse_chart가 latest_and_previous 헬퍼로 meta.regularMarketPrice/regularMarketTime을 최신 시세로 쓰고 직전가는 as_of 이전 날짜의 close에서 가져온다(못 읽으면 기존 방식 폴백). 테스트 11건 추가.",
+      "completed_at": "2026-08-21T00:27:00+0900"
+    },
+    {
+      "step": 1,
+      "name": "docs",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-21T00:23:58+0900"
 }

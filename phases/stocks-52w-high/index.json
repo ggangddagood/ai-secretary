@@ -1,0 +1,9 @@
+{
+  "project": "ai-secretary",
+  "phase": "stocks-52w-high",
+  "steps": [
+    { "step": 0, "name": "quotes-52w", "status": "pending" },
+    { "step": 1, "name": "render-52w", "status": "pending" },
+    { "step": 2, "name": "docs", "status": "pending" }
+  ]
+}

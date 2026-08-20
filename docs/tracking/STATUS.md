@@ -2,7 +2,7 @@
 
 > 작성 기준: 매 사이클 갱신. "완료"는 검증된 상태만 — 테스트 없는 구현은 "구현됨, 미검증"으로 구분해서 적는다. "남은 것"은 막연한 개선("성능 개선 필요")이 아니라 구체적 항목.
 
-기준 시점: 2026-08-20 / 브랜치 `main` / phase `stocks-brief` **완료 — 가동 중** (관심 종목 미등록)
+기준 시점: 2026-08-20 / 브랜치 `feat-stocks-52w-high` / phase `stocks-52w-high` **구현·문서 완료, 머지 전**
 
 리포: https://github.com/ggangddagood/ai-secretary (공개)
 
@@ -10,6 +10,9 @@
 - phase `stocks-brief` (주가 브리핑) — **완료**. `main` 머지 후 실제 Actions 실행까지 검증했다.
   평일 07:00 KST(미국장) / 16:00 KST(한국장) 자동 발송 가동 중.
   **관심 종목이 아직 미등록이라 현재는 지수·환율만 발송된다** — 아래 "남은 것" 1번
+- phase `stocks-52w-high` (52주 지표) — 구현·문서 **완료**, `main` 미머지. 모든 시세 줄에
+  52주 고점 대비 하락률과 범위 내 위치를 붙인다. dry-run까지 확인했고 실제 Actions 실행은
+  아직이다
 
 ## phase daily-brief-mvp (AI 브리핑) — 완료
 
@@ -82,16 +85,47 @@
 회귀 실행에서 Gemini 선별 호출이 약 6분 걸렸다(수집 완료 00:17:42 → 선별 완료 00:23:49).
 실패는 아니지만 워크플로 `timeout-minutes` 를 넘길 여지가 있다 — 아래 "남은 것" 참고.
 
+## phase stocks-52w-high (52주 지표) — 구현·문서 완료, 머지 전
+
+`bash scripts/verify.sh` exit **0** (ruff check + ruff format --check + pytest **145 passed**).
+`stocks-brief` 완료 시점의 128건에서 17건 늘었다(quotes 12→22 · render 13→20).
+
+- **step 0 quotes-52w** — `Quote`에 `drawdown_pct`/`range_pct`를 **기본값 `None`으로 맨 뒤에**
+  추가하고, `quotes.fifty_two_week` 가 `meta.fiftyTwoWeekHigh`/`fiftyTwoWeekLow` 로 둘을 계산해
+  `parse_chart` 가 채운다. 추가 HTTP 호출 없음, `RANGE` 변경 없음, 등락률 계산 경로 불변.
+  `range_pct` 만 0~100 클램프하고 52주 값을 못 읽어도 조회는 성공 — 10건 신설(138건)
+- **step 1 render-52w** — `render._format_52w` 가 시세 줄 다음에 들여쓴 한 줄을 붙인다
+  (`_render_index`·`_render_entry`). 하락률이 `None`이면 줄 생략, `>= 0`이면 `52주 신고가`,
+  범위 내 위치가 `None`이면 괄호만 생략. 급등락 블록(`_render_mover`)은 제외 — 7건 신설(145건)
+- **step 2 docs** — `docs/BUSINESS_RULES.md` 에 "52주 지표 규칙" 절과 엣지 케이스 8행,
+  `docs/ENGINEERING_NOTES.md` 에 함정 1건(`fiftyTwoWeekHigh` 는 장중 고가) 추가. 코드 변경 없음
+
+### 검증 기록 (실제 실행, 2026-08-20)
+
+| 항목 | 결과 |
+| --- | --- |
+| `bash scripts/verify.sh` | exit **0** — 145 passed |
+| `python3 -m secretary.stocks --market us --dry-run` | exit **0**. 지수 3건 + 관심 종목 2건 **모든 시세 줄**에 52주 줄이 붙었다(예: `52주 고점 대비 -8.1%  (범위 내 77%)`). 조각 1개 |
+| `python3 -m secretary.stocks --market kr --dry-run` | exit **0**. 지수 3건 + 관심 종목 2건 모든 시세 줄에 52주 줄. 조각 1개 |
+| 기존 파이프라인 회귀 `python3 -m secretary.main --dry-run` | exit **0**. 중복 제거 후 126 → 선별 5 → 본문 5/5 → 조각 1개 |
+| **실제 Actions 실행** | **아직 없다.** 브랜치 `feat-stocks-52w-high` 를 머지하지 않았다 — 52주 줄을 확인한 것은 dry-run 출력까지다 |
+| 신고가(`drawdown_pct >= 0`) 표시면 | **실데이터로는 미확인.** dry-run 5종목이 모두 고점 아래였다. 단위 테스트로만 검증했다 |
+
+dry-run에는 문서 예시 종목(`AAPL`, `NVDA`, `005930.KS`, `035720.KQ`)을 환경 변수로 주입해 썼다.
+실제 관심 종목이 아니다.
+
 ## 남은 것 (우선순위 순)
 
 1. **`STOCKS_WATCHLIST_US` / `STOCKS_WATCHLIST_KR` 등록** — 아직 등록하지 않았다. 등록 전에는
    지수·환율만 발송된다. 절차는 `docs/OPERATIONS.md` "4. 관심 종목 등록"
    (**Secrets 탭이 아니라 Variables 탭**).
 2. **종목 등록 후 재검증** — 2026-08-20 수동 실행으로 conclusion success·토큰 마스킹·상태 커밋
-   없음까지 확인했다(위 표). 다만 종목이 미등록이었으므로 **아직 확인되지 않은 것**이 둘 남았다.
+   없음까지 확인했다(위 표). 다만 종목이 미등록이었으므로 **아직 확인되지 않은 것**이 셋 남았다.
    - `vars.STOCKS_WATCHLIST_*`가 실제로 주입돼 관심 종목이 조회되는지
    - **기준일이 당일로 찍히는지** — 자정 dry-run에서 한국장 기준일이 하루 물러나고 "휴장"이
      잘못 붙은 사례가 있다(`docs/tracking/FINDINGS.md`). 첫 16:00 KST 정시 실행에서 확인한다.
+   - **52주 줄이 실제 발송 메시지에 붙는지** — dry-run 출력에서는 확인했으나, `stocks-52w-high`
+     를 머지한 뒤의 Actions 실행은 아직 없다.
 3. **뉴스 검색어 오염 대응** — 해설 경로 자체는 2026-08-20에 `STOCKS_MOVE_THRESHOLD=2` 로
    낮춰 **실데이터로 완주시켰다**(위 표). 다만 표시명이 플랫폼 이름과 겹치는 종목(`NAVER`)에서
    무관한 헤드라인만 모이는 것을 확인했다 — `docs/tracking/FINDINGS.md` 참조. LLM이 이유를

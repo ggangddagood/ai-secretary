@@ -92,6 +92,21 @@
   `::test_parse_chart_skips_none_in_the_middle` (중간),
   `::test_parse_chart_returns_none_with_single_valid_close` (유효값 부족).
 
+### `fiftyTwoWeekHigh` 는 장중 고가라 종가보다 높을 수 있다
+
+- 증상: 52주 고점 대비 하락률(`drawdown_pct`)이 **양수**로 나온다. 정의상 0 이하여야 할 값이라
+  버그로 보이고, 0으로 클램프하고 싶어진다.
+- 원인: 우리는 `close` 배열의 **종가**로 계산하는데 `meta.fiftyTwoWeekHigh` 는 **장중 고가**를
+  포함한 값이다. 기준이 다르므로 종가가 52주 고점을 넘는 날이 실제로 생긴다 — 데이터 오류가
+  아니다.
+- 대응: 양수를 그대로 둔다. `stocks/quotes.py:fifty_two_week` 는 `range_pct` 만 0~100으로
+  클램프하고 `drawdown_pct` 는 손대지 않으며, `stocks/render.py:_format_52w` 가
+  `drawdown_pct >= 0` 을 **"52주 신고가"** 로 분기한다. 클램프하면 이 신호가 `-0.0%` 로 뭉개져
+  사라진다.
+- 검증: `tests/test_stocks_quotes.py::test_fifty_two_week_keeps_positive_drawdown_above_high`
+  (종가 105 > 고점 100 → `drawdown_pct` 가 `+5.0`),
+  `tests/test_stocks_render.py::test_new_high_replaces_the_range_position` (표시면).
+
 ### Yahoo v8 chart는 이 프로젝트의 User-Agent를 거부하지 않는다
 
 - 증상: 시세 API를 붙일 때 "브라우저 User-Agent로 위장해야 한다"는 조언을 먼저 만나게 된다.

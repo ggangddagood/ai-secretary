@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "docs",
-      "status": "pending"
+      "status": "error",
+      "started_at": "2026-08-21T00:28:59+0900",
+      "error_message": "[3회 시도 후 실패] Step did not update status",
+      "failed_at": "2026-08-21T01:56:22+0900"
     }
   ],
   "created_at": "2026-08-21T00:23:58+0900"

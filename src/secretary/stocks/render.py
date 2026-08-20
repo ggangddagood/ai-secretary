@@ -51,14 +51,35 @@ def _render_header(brief: StockBrief) -> str:
     return f"{line}\n<i>기준일 {brief.as_of.isoformat()}{holiday}</i>"
 
 
+def _format_52w(quote: Quote) -> str | None:
+    """52주 지표 줄. 표시할 값이 없으면 None — 호출자가 줄 자체를 생략한다.
+
+    고정 문구와 우리가 만든 숫자뿐이라 `text()`를 거치지 않는다.
+    """
+    if quote.drawdown_pct is None:
+        return None
+    # 신고가면 범위 내 위치가 100%로 자명하다 — 덧붙이면 중복이다.
+    if quote.drawdown_pct >= 0:
+        return "   52주 신고가"
+    # drawdown_pct는 음수이므로 :.1f가 부호를 만든다.
+    line = f"   52주 고점 대비 {quote.drawdown_pct:.1f}%"
+    if quote.range_pct is None:
+        return line
+    return f"{line}  (범위 내 {quote.range_pct:.0f}%)"
+
+
 def _render_index(quote: Quote) -> str:
-    return f"{text(quote.ticker.label)}  {_format_price(quote)}  {_format_change(quote.change_pct)}"
+    line = f"{text(quote.ticker.label)}  {_format_price(quote)}  {_format_change(quote.change_pct)}"
+    fifty_two = _format_52w(quote)
+    return f"{line}\n{fifty_two}" if fifty_two else line
 
 
 def _render_entry(entry: StockEntry) -> str:
     quote = entry.quote
     label = f"{text(quote.ticker.label)} ({text(quote.ticker.symbol)})"
-    return f"{label}  {_format_price(quote)}  {_format_change(quote.change_pct)}"
+    line = f"{label}  {_format_price(quote)}  {_format_change(quote.change_pct)}"
+    fifty_two = _format_52w(quote)
+    return f"{line}\n{fifty_two}" if fifty_two else line
 
 
 def _render_mover(entry: StockEntry) -> str:

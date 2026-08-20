@@ -17,6 +17,8 @@ def make_quote(
     price: float = 226.34,
     change_pct: float = 1.2,
     currency: str = "USD",
+    drawdown_pct: float | None = None,
+    range_pct: float | None = None,
 ) -> Quote:
     return Quote(
         ticker=Ticker(symbol, label),
@@ -24,6 +26,8 @@ def make_quote(
         change_pct=change_pct,
         currency=currency,
         as_of=AS_OF,
+        drawdown_pct=drawdown_pct,
+        range_pct=range_pct,
     )
 
 
@@ -193,3 +197,78 @@ def test_render_failure_escapes_reason():
     assert render_failure("kr", "시세 조회 <all> 실패 & 0건") == (
         "⚠️ 한국장 주가 브리핑을 만들지 못했습니다: 시세 조회 &lt;all&gt; 실패 &amp; 0건"
     )
+
+
+def test_52w_line_follows_the_price_line_of_a_watchlist_entry():
+    quote = make_quote(
+        "005930.KS",
+        "삼성전자",
+        price=271000.0,
+        currency="KRW",
+        drawdown_pct=-27.64,
+        range_pct=66.29,
+    )
+
+    (part,) = render_stock_brief(make_brief(indices=[], entries=[make_entry(quote)]))
+
+    assert (
+        "삼성전자 (005930.KS)  271,000  ▲ +1.20%\n   52주 고점 대비 -27.6%  (범위 내 66%)" in part
+    )
+
+
+def test_52w_line_is_omitted_when_drawdown_is_unknown():
+    (part,) = render_stock_brief(make_brief())
+
+    assert "52주" not in part
+
+
+def test_new_high_replaces_the_range_position():
+    quote = make_quote(drawdown_pct=0.5, range_pct=100.0)
+
+    (part,) = render_stock_brief(make_brief(indices=[], entries=[make_entry(quote)]))
+
+    assert "   52주 신고가" in part
+    assert "범위 내" not in part
+    assert "고점 대비" not in part
+
+
+def test_range_position_is_dropped_when_unknown():
+    quote = make_quote(drawdown_pct=-3.27, range_pct=None)
+
+    (part,) = render_stock_brief(make_brief(indices=[], entries=[make_entry(quote)]))
+
+    assert "   52주 고점 대비 -3.3%" in part
+    assert "범위 내" not in part
+
+
+def test_index_lines_get_the_52w_line_too():
+    index = make_quote("^KS11", "코스피", price=6869.83, drawdown_pct=-8.24, range_pct=73.9)
+
+    (part,) = render_stock_brief(make_brief(market="kr", indices=[index], entries=[]))
+
+    assert "코스피  6,869.83  ▲ +1.20%\n   52주 고점 대비 -8.2%  (범위 내 74%)" in part
+
+
+def test_movers_block_has_no_52w_line():
+    quote = make_quote(drawdown_pct=-27.64, range_pct=66.29)
+    entry = make_entry(quote, headlines=[make_headline()], comment_ko="신제품 발표가 있었다.")
+
+    (part,) = render_stock_brief(make_brief(indices=[], entries=[entry]))
+
+    mover = part.split("🔎 급등락</b>\n")[1]
+    assert "52주" not in mover
+
+
+def test_52w_lines_do_not_push_parts_over_the_limit():
+    entries = [
+        make_entry(
+            make_quote(f"SYM{index}", f"종목 {index}", drawdown_pct=-12.34, range_pct=56.78),
+            headlines=[make_headline("가" * 200, f"https://news.example.com/{index}")] * 5,
+            comment_ko="나" * 200,
+        )
+        for index in range(12)
+    ]
+
+    parts = render_stock_brief(make_brief(entries=entries))
+
+    assert all(len(part) <= TELEGRAM_LIMIT for part in parts)

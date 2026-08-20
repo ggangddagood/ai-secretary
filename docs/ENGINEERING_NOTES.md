@@ -73,8 +73,10 @@
   `range=1mo` 로 부르면 한 달 전 근처의 값이 온다. 실측에서 삼성전자(`005930.KS`)의
   `chartPreviousClose` 는 239500이었는데 실제 직전 거래일 종가는 268500이었다 — 이 값으로
   계산하면 등락률이 +12%로 나간다.
-- 대응: `indicators.quote[0].close` 배열에서 `None` 을 제거한 **유효값의 마지막 두 개**로만
-  계산한다(`stocks/quotes.py:parse_chart`). `meta` 에서는 타임존과 통화만 읽는다.
+- 대응: 직전 종가는 언제나 `indicators.quote[0].close` 배열에서만 가져온다
+  (`stocks/quotes.py:latest_and_previous`). `meta` 에서 직전가를 읽지 않는다. `meta` 에서 읽는
+  것은 타임존·통화·52주 고저와 **최신** 시세(`regularMarketPrice`/`regularMarketTime`)이며,
+  최신가와 `chartPreviousClose` 는 별개 필드다.
 - 검증: `tests/test_stocks_quotes.py::test_change_pct_ignores_chart_previous_close` 가 실측값
   그대로(`chartPreviousClose=239500`, 직전 종가 268500) 회귀를 잡는다. 새 필드를 `meta` 에서
   읽고 싶어지면 그 값이 조회 창의 **안**을 가리키는지부터 확인한다.
@@ -91,6 +93,44 @@
 - 검증: `tests/test_stocks_quotes.py::test_parse_chart_skips_trailing_none_close` (마지막 원소),
   `::test_parse_chart_skips_none_in_the_middle` (중간),
   `::test_parse_chart_returns_none_with_single_valid_close` (유효값 부족).
+- 지금 이 처리는 **폴백 경로**다. 최신가와 기준일은 아래 항목대로 `meta` 에서 먼저 읽고,
+  `close` 는 직전 종가 전용으로 쓴다.
+
+### 장 마감 후에도 `close` 배열의 그날 bar가 `None` 인 구간이 있다
+
+- 증상: 2026-08-21 00:13 KST 한국장 브리핑이 **이틀 전(8/19) 데이터**를 싣고 헤더에 "휴장"을
+  잘못 표시했다. 8/20 한국장은 정상 개장·마감했다. 예외도 경고도 없다 — 값이 틀린 것이 아니라
+  하루 늦은 것이라 눈치채기 어렵다.
+- 원인: 같은 응답 안에서 필드끼리 어긋난다. `005930.KS` 의 8/20 bar는 존재하는데 `close` 가
+  `None` 이었고, 같은 응답의 `meta.regularMarketPrice` 는 `271000.0`,
+  `meta.regularMarketTime` 은 `2026-08-20 15:30:20 KST`(정규 마감)로 확정 종가를 갖고 있었다.
+  전날 22:53 조회에는 8/20 값이 `close` 에 채워져 있었다 — **채워졌다가 다시 비워지는 구간**이
+  있다. 그래서 "한 번 확인했으니 괜찮다"가 성립하지 않는다.
+- 대응: `stocks/quotes.py:latest_and_previous` 가 `meta.regularMarketPrice` 를 최신가로,
+  `meta.regularMarketTime` 의 (거래소 타임존) 날짜를 기준일로 쓴다. `close` 는 **직전 종가
+  전용**이다 — 기준일보다 **이전 날짜**의 마지막 유효값을 쓴다. 그냥 마지막 유효값을 쓰면
+  `close` 에 최신 종가가 이미 들어 있는 미국장에서 최신가와 같은 날이 되어 등락률이 0이 된다.
+  `meta` 를 읽을 수 없거나 이전 날짜의 유효값이 없으면 기존 방식(유효값 마지막 두 개)으로
+  폴백한다. `meta.chartPreviousClose` 금지 규칙은 그대로다 — 별개 필드다.
+- 검증: `tests/test_stocks_quotes.py::test_parse_chart_uses_meta_price_when_last_close_is_none`
+  (실측값 그대로: `close` 마지막이 `None`, `meta` 271000 → 8/19 종가 247500 대비 +9.49%),
+  `::test_parse_chart_takes_previous_from_an_earlier_day_when_close_has_latest` (미국장 경로),
+  `::test_latest_and_previous_never_takes_previous_from_meta`, 폴백 4건
+  (`::test_parse_chart_falls_back_*`).
+- 알려진 한계: 장중에 수동 실행하면 `regularMarketPrice` 는 장중 가격이므로 "종가"가 아니다.
+  cron은 마감 후에만 돌아 실운영에는 영향이 없다.
+
+### `currentTradingPeriod` 로 장중 여부를 판정할 수 없다
+
+- 증상: "마감된 종가인지 장중 가격인지 `meta.currentTradingPeriod.regular` 와
+  `regularMarketTime` 을 비교해 가리자"는 방법이 자연스러워 보인다. 그렇게 하면 **마감된 종가를
+  장중으로 오판**해 `meta` 경로가 통째로 죽는다.
+- 원인: 이 값은 마감 후 이미 **다음** 거래일을 가리킨다. 실측(2026-08-21 00:13 KST,
+  `005930.KS`)에서 `regularMarketTime` 은 8/20 15:30:20인데 `currentTradingPeriod.regular` 는
+  8/21 09:00~15:00이었다. `regularMarketTime >= end` 비교가 거짓이 되어 확정 종가가 장중
+  가격으로 분류된다.
+- 대응: 장중 여부를 판정하지 않는다. `regularMarketPrice` 를 그대로 최신 시세로 쓴다 — cron은
+  마감 후에만 돌므로 판정이 필요 없다. `currentTradingPeriod` 를 읽는 코드를 넣지 않는다.
 
 ### `fiftyTwoWeekHigh` 는 장중 고가라 종가보다 높을 수 있다
 

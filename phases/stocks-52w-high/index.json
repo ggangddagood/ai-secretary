@@ -16,7 +16,7 @@
       "status": "completed",
       "started_at": "2026-08-20T22:57:35+0900",
       "summary": "render._format_52w가 52주 줄을 만들고 _render_index·_render_entry가 시세 줄 다음에 붙인다. drawdown_pct None이면 줄 생략, 0 이상이면 '52주 신고가', range_pct None이면 괄호만 생략. 급등락 블록은 제외. 테스트 7건 추가",
-      "completed_at": "2026-08-20T23:00:10+0900"
+      "completed_at": "2026-08-20T23:00:31+0900"
     },
     {
       "step": 2,

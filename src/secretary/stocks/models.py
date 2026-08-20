@@ -30,6 +30,9 @@ class Quote:
     change_pct: float
     currency: str  # meta.currency 원문. 예: "USD", "KRW"
     as_of: date  # 최신 유효 종가의 거래일 (거래소 타임존 기준)
+    # 아래 둘은 부가 지표다. 읽지 못해도 시세는 유효하므로 기본값 None으로 맨 뒤에 둔다.
+    drawdown_pct: float | None = None  # 52주 고점 대비 %. 보통 0 이하, 신고가면 양수
+    range_pct: float | None = None  # 52주 저점~고점 구간 내 위치 %. 0~100
 
 
 @dataclass(frozen=True)

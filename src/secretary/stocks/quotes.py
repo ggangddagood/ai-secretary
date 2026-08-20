@@ -81,13 +81,39 @@ def parse_chart(payload: dict[str, Any], ticker: Ticker) -> Quote | None:
             logger.warning("직전 종가가 0입니다 %s", ticker.symbol)
             return None
         as_of = datetime.fromtimestamp(latest_ts, tz=ZoneInfo(meta["exchangeTimezoneName"])).date()
+        drawdown_pct, range_pct = fifty_two_week(meta, float(latest))
         return Quote(
             ticker=ticker,
             price=float(latest),
             change_pct=(float(latest) - float(prev)) / float(prev) * 100,
             currency=meta["currency"],
             as_of=as_of,
+            drawdown_pct=drawdown_pct,
+            range_pct=range_pct,
         )
     except (KeyError, IndexError, TypeError) as exc:
         logger.warning("시세 응답을 읽을 수 없습니다 %s: %s", ticker.symbol, describe_error(exc))
         return None
+
+
+def fifty_two_week(meta: dict[str, Any], price: float) -> tuple[float | None, float | None]:
+    """(52주 고점 대비 %, 52주 범위 내 위치 %)를 돌려준다. 읽을 수 없으면 (None, None).
+
+    값은 `meta`에 이미 들어 있다 — 추가 조회도, RANGE 변경도 하지 않는다.
+    고점 대비는 클램프하지 않는다: 양수는 "신고가"라는 신호이고 렌더가 그것으로 분기한다.
+    범위 내 위치만 0~100으로 클램프해 이상 데이터(저점 밑 종가, low > high)를 흡수한다.
+    """
+    raw_high, raw_low = meta.get("fiftyTwoWeekHigh"), meta.get("fiftyTwoWeekLow")
+    if raw_high is None or raw_low is None:
+        return (None, None)
+    try:
+        high, low = float(raw_high), float(raw_low)
+    except (TypeError, ValueError):
+        return (None, None)
+    if high <= 0:
+        return (None, None)
+    drawdown_pct = (price - high) / high * 100
+    if high == low:
+        return (drawdown_pct, None)
+    range_pct = min(100.0, max(0.0, (price - low) / (high - low) * 100))
+    return (drawdown_pct, range_pct)

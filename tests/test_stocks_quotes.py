@@ -8,7 +8,7 @@ import pytest
 
 from secretary.stocks import quotes as quotes_module
 from secretary.stocks.models import Ticker
-from secretary.stocks.quotes import fetch_quotes, parse_chart
+from secretary.stocks.quotes import fetch_quotes, fifty_two_week, parse_chart
 
 APPLE = Ticker("AAPL", "애플")
 SAMSUNG = Ticker("005930.KS", "삼성전자")
@@ -28,10 +28,13 @@ def chart_payload(
     tz="America/New_York",
     currency="USD",
     previous_close=None,
+    meta_extra=None,
 ):
     meta = {"exchangeTimezoneName": tz, "currency": currency}
     if previous_close is not None:
         meta["chartPreviousClose"] = previous_close
+    if meta_extra is not None:
+        meta.update(meta_extra)
     return {
         "chart": {
             "error": None,
@@ -178,6 +181,99 @@ def test_change_pct_ignores_chart_previous_close():
     assert quote is not None
     assert quote.change_pct == pytest.approx((271000.0 - 268500.0) / 268500.0 * 100)
     assert quote.change_pct != pytest.approx((271000.0 - 239500.0) / 239500.0 * 100)
+
+
+# --- fifty_two_week ------------------------------------------------------
+
+
+def test_fifty_two_week_computes_drawdown_and_range():
+    """실측 삼성전자: 고점 374500 / 저점 67500 / 종가 271000."""
+    drawdown_pct, range_pct = fifty_two_week(
+        {"fiftyTwoWeekHigh": 374500.0, "fiftyTwoWeekLow": 67500.0}, 271000.0
+    )
+
+    assert drawdown_pct == pytest.approx(-27.64, abs=0.01)
+    assert range_pct == pytest.approx(66.29, abs=0.01)
+
+
+def test_fifty_two_week_returns_none_when_high_key_missing():
+    assert fifty_two_week({"fiftyTwoWeekLow": 67500.0}, 271000.0) == (None, None)
+
+
+def test_fifty_two_week_returns_none_when_low_is_null():
+    assert fifty_two_week({"fiftyTwoWeekHigh": 374500.0, "fiftyTwoWeekLow": None}, 271000.0) == (
+        None,
+        None,
+    )
+
+
+def test_fifty_two_week_returns_none_on_non_numeric_value():
+    assert fifty_two_week({"fiftyTwoWeekHigh": "N/A", "fiftyTwoWeekLow": 67500.0}, 271000.0) == (
+        None,
+        None,
+    )
+
+
+def test_fifty_two_week_returns_none_when_high_is_zero():
+    """0으로 나누지 않는다."""
+    assert fifty_two_week({"fiftyTwoWeekHigh": 0, "fiftyTwoWeekLow": 0}, 100.0) == (None, None)
+
+
+def test_fifty_two_week_drops_only_range_when_high_equals_low():
+    drawdown_pct, range_pct = fifty_two_week(
+        {"fiftyTwoWeekHigh": 100.0, "fiftyTwoWeekLow": 100.0}, 100.0
+    )
+
+    assert drawdown_pct == pytest.approx(0.0)
+    assert range_pct is None
+
+
+def test_fifty_two_week_keeps_positive_drawdown_above_high():
+    """fiftyTwoWeekHigh는 장중 고가를 포함하므로 종가가 이를 넘을 수 있다. 클램프하지 않는다."""
+    drawdown_pct, range_pct = fifty_two_week(
+        {"fiftyTwoWeekHigh": 100.0, "fiftyTwoWeekLow": 50.0}, 105.0
+    )
+
+    assert drawdown_pct == pytest.approx(5.0)
+    assert range_pct == pytest.approx(100.0)
+
+
+def test_fifty_two_week_clamps_range_below_low():
+    drawdown_pct, range_pct = fifty_two_week(
+        {"fiftyTwoWeekHigh": 100.0, "fiftyTwoWeekLow": 50.0}, 40.0
+    )
+
+    assert drawdown_pct == pytest.approx(-60.0)
+    assert range_pct == 0.0
+
+
+def test_parse_chart_fills_fifty_two_week_from_meta():
+    payload = chart_payload(
+        timestamps=[DAY1, DAY2],
+        closes=[268500.0, 271000.0],
+        tz="Asia/Seoul",
+        currency="KRW",
+        meta_extra={"fiftyTwoWeekHigh": 374500.0, "fiftyTwoWeekLow": 67500.0},
+    )
+
+    quote = parse_chart(payload, SAMSUNG)
+
+    assert quote is not None
+    assert quote.drawdown_pct == pytest.approx(-27.64, abs=0.01)
+    assert quote.range_pct == pytest.approx(66.29, abs=0.01)
+
+
+def test_parse_chart_keeps_quote_without_fifty_two_week_meta():
+    """52주 값을 못 읽어도 조회 실패가 아니다 — 종가와 등락률은 이미 유효하다."""
+    payload = chart_payload(timestamps=[DAY1, DAY2], closes=[100.0, 110.0])
+
+    quote = parse_chart(payload, APPLE)
+
+    assert quote is not None
+    assert quote.price == 110.0
+    assert quote.change_pct == pytest.approx(10.0)
+    assert quote.drawdown_pct is None
+    assert quote.range_pct is None
 
 
 # --- fetch_quotes --------------------------------------------------------

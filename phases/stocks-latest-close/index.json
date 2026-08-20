@@ -1,0 +1,8 @@
+{
+  "project": "ai-secretary",
+  "phase": "stocks-latest-close",
+  "steps": [
+    { "step": 0, "name": "latest-close", "status": "pending" },
+    { "step": 1, "name": "docs", "status": "pending" }
+  ]
+}

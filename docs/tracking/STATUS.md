@@ -2,13 +2,14 @@
 
 > 작성 기준: 매 사이클 갱신. "완료"는 검증된 상태만 — 테스트 없는 구현은 "구현됨, 미검증"으로 구분해서 적는다. "남은 것"은 막연한 개선("성능 개선 필요")이 아니라 구체적 항목.
 
-기준 시점: 2026-08-20 / 브랜치 `feat-stocks-brief` / phase `stocks-brief` **코드·문서 완료, 운영 검증 미완**
+기준 시점: 2026-08-20 / 브랜치 `main` / phase `stocks-brief` **완료 — 가동 중** (관심 종목 미등록)
 
 리포: https://github.com/ggangddagood/ai-secretary (공개)
 
 - phase `daily-brief-mvp` (AI 브리핑) — **완료**. 매일 08:00 KST 자동 발송 가동 중
-- phase `stocks-brief` (주가 브리핑) — step 0~7 구현·문서 완료. **아직 머지되지 않았고 실제
-  Actions 실행으로 검증되지 않았다**
+- phase `stocks-brief` (주가 브리핑) — **완료**. `main` 머지 후 실제 Actions 실행까지 검증했다.
+  평일 07:00 KST(미국장) / 16:00 KST(한국장) 자동 발송 가동 중.
+  **관심 종목이 아직 미등록이라 현재는 지수·환율만 발송된다** — 아래 "남은 것" 1번
 
 ## phase daily-brief-mvp (AI 브리핑) — 완료
 
@@ -69,6 +70,11 @@
 | 기존 파이프라인 회귀 `python -m secretary.main --dry-run` | exit **0**. 수집 138 → 중복 제거 후 138 → 선별 5 → 본문 5/5 → 조각 1개 |
 | 워크플로 파일 | `stocks-us.yml`(`0 22 * * 1-5`) / `stocks-kr.yml`(`0 7 * * 1-5`) 생성. `contents: write` 없음, `vars.STOCKS_WATCHLIST_*` 참조 확인 |
 | `daily.yml` | 이번 phase에서 **수정하지 않음**(git diff 없음) |
+| **실제 Actions 실행** `stocks-kr` (run 32375116154) | conclusion **success**, 45초. 지수 3건 조회 → 조각 1개 발송 |
+| **실제 Actions 실행** `stocks-us` (run 32375120138) | conclusion **success**, 45초. 지수 3건 조회 → 조각 1개 발송 |
+| 공개 Actions 로그 시크릿 노출 | **없음**. 봇 토큰 평문 매치 0건, `api.telegram.org/bot***` 형태로만 존재 |
+| 관심 종목 미등록 상태의 Actions 실행 | `관심 종목 목록이 비어 있습니다` warning 후 지수만으로 발송 — 실운영에서도 빈 목록이 실패가 아님을 확인 |
+| 주가 워크플로의 상태 커밋 | **생기지 않음**(`main..origin/main` 비어 있음). 상태 파일을 쓰지 않는 설계대로 |
 
 관심 종목을 넣은 dry-run에는 문서 예시 종목(`AAPL`, `NVDA`, `005930.KS`, `035720.KQ`)을 환경
 변수로 주입해 썼다. 실제 관심 종목이 아니다.
@@ -81,14 +87,11 @@
 1. **`STOCKS_WATCHLIST_US` / `STOCKS_WATCHLIST_KR` 등록** — 아직 등록하지 않았다. 등록 전에는
    지수·환율만 발송된다. 절차는 `docs/OPERATIONS.md` "4. 관심 종목 등록"
    (**Secrets 탭이 아니라 Variables 탭**).
-2. **실제 GitHub Actions 실행 검증** — 아직 하지 않았다. `workflow_dispatch`는 워크플로 파일이
-   기본 브랜치에 있어야 목록에 뜨므로(`ENGINEERING_NOTES.md`), **머지 후에** `gh workflow run
-   stocks-us` / `stocks-kr` 로 수동 실행해 다음을 확인한다.
-   - conclusion success, 텔레그램에 메시지 도착
-   - 공개 Actions 로그에 봇 토큰이 `bot***`로 마스킹되는지
-   - `vars.STOCKS_WATCHLIST_*`가 주입돼 관심 종목이 실제로 조회되는지
-   - 상태 커밋이 **생기지 않는지**(주가 워크플로는 상태를 쓰지 않는다)
-   - **기준일이 당일로 찍히는지** — 자정 dry-run에서 한국장 기준일이 하루 물러나고 "휴장"이 잘못 붙은 사례가 있다(`docs/tracking/FINDINGS.md`)
+2. **종목 등록 후 재검증** — 2026-08-20 수동 실행으로 conclusion success·토큰 마스킹·상태 커밋
+   없음까지 확인했다(위 표). 다만 종목이 미등록이었으므로 **아직 확인되지 않은 것**이 둘 남았다.
+   - `vars.STOCKS_WATCHLIST_*`가 실제로 주입돼 관심 종목이 조회되는지
+   - **기준일이 당일로 찍히는지** — 자정 dry-run에서 한국장 기준일이 하루 물러나고 "휴장"이
+     잘못 붙은 사례가 있다(`docs/tracking/FINDINGS.md`). 첫 16:00 KST 정시 실행에서 확인한다.
 3. **뉴스 검색어 오염 대응** — 해설 경로 자체는 2026-08-20에 `STOCKS_MOVE_THRESHOLD=2` 로
    낮춰 **실데이터로 완주시켰다**(위 표). 다만 표시명이 플랫폼 이름과 겹치는 종목(`NAVER`)에서
    무관한 헤드라인만 모이는 것을 확인했다 — `docs/tracking/FINDINGS.md` 참조. LLM이 이유를

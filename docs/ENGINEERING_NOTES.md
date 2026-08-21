@@ -196,6 +196,13 @@
 - 원인: GitHub은 `workflow_dispatch` 대상 목록을 기본 브랜치의 워크플로 파일에서 만든다. 다른 브랜치의 파일은 목록에 없다(`--ref`로 실행 대상 ref를 고르는 것과 별개다).
 - 대응: 수동 실행으로 검증하려면 워크플로 파일을 먼저 기본 브랜치에 머지한다.
 
+### `execute.py` 의 실패 기록이 항상 작업 실패를 뜻하지는 않는다
+
+- 증상: `execute.py` 가 step을 `error` + `"Step did not update status"` 로 기록하고 exit 1로 죽는다. 그런데 실제로 열어 보면 그 step의 산출물(코드·문서)이 **이미 반영돼 있다**.
+- 원인: 하네스는 오직 `phases/<task>/index.json` 의 `status` 필드로 성공을 판정한다. 에이전트가 작업을 끝내고 status를 갱신하기 **직전**에 죽으면 결과가 남아도 실패로 기록된다. 2026-08-21 `stocks-latest-close` step 1이 그랬다 — `claude` 가 `stop_reason: "stop_sequence"`, `output_tokens: 1` 로 3회 모두 0초 만에 종료됐는데, 문서 3개 67줄은 이미 커밋돼 있었다. `_commit_step` 은 실패 경로에서도 호출되므로 커밋까지 남는다.
+- 대응: `error` 를 보면 **재실행하기 전에 `git show` 로 그 step의 커밋과 작업 트리를 먼저 확인한다.** 이미 완료됐으면 status만 `completed` 로 정정하고 누락분(대개 마지막 지시 항목)만 손으로 채운다. 확인 없이 `pending` 으로 되돌려 재실행하면 문서에 같은 절이 두 번 삽입된다.
+- 검증: `bash scripts/verify.sh` 와 그 step의 AC를 직접 실행해 판단한다. `index.json` 의 status는 근거가 아니다.
+
 ## 반복 작업 체크리스트
 
 ### RSS 피드 추가/교체

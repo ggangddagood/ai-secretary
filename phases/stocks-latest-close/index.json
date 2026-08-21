@@ -13,10 +13,10 @@
     {
       "step": 1,
       "name": "docs",
-      "status": "error",
+      "status": "completed",
       "started_at": "2026-08-21T00:28:59+0900",
-      "error_message": "[3회 시도 후 실패] Step did not update status",
-      "failed_at": "2026-08-21T01:56:22+0900"
+      "failed_at": "2026-08-21T01:56:22+0900",
+      "summary": "BUSINESS_RULES 등락률 규칙 개정(meta 우선 + close는 직전가 전용, chartPreviousClose 금지 유지), ENGINEERING_NOTES에 함정 2건, FINDINGS에서 해결된 '기준일 후퇴' 항목 삭제. execute.py는 error로 기록했으나 문서는 실제로 갱신됐다 — 에이전트가 index.json status 갱신 직전 stop_sequence로 종료(0초, output_tokens=1). 누락된 STATUS.md 갱신은 수동 보완."
     }
   ],
   "created_at": "2026-08-21T00:23:58+0900"

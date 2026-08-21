@@ -2,7 +2,7 @@
 
 > 작성 기준: 매 사이클 갱신. "완료"는 검증된 상태만 — 테스트 없는 구현은 "구현됨, 미검증"으로 구분해서 적는다. "남은 것"은 막연한 개선("성능 개선 필요")이 아니라 구체적 항목.
 
-기준 시점: 2026-08-20 / 브랜치 `feat-stocks-52w-high` / phase `stocks-52w-high` **구현·문서 완료, 머지 전**
+기준 시점: 2026-08-22 / 브랜치 `feat-stocks-latest-close` / phase `stocks-latest-close` **구현·문서 완료, 머지 전**
 
 리포: https://github.com/ggangddagood/ai-secretary (공개)
 
@@ -10,9 +10,15 @@
 - phase `stocks-brief` (주가 브리핑) — **완료**. `main` 머지 후 실제 Actions 실행까지 검증했다.
   평일 07:00 KST(미국장) / 16:00 KST(한국장) 자동 발송 가동 중.
   **관심 종목이 아직 미등록이라 현재는 지수·환율만 발송된다** — 아래 "남은 것" 1번
-- phase `stocks-52w-high` (52주 지표) — 구현·문서 **완료**, `main` 미머지. 모든 시세 줄에
-  52주 고점 대비 하락률과 범위 내 위치를 붙인다. dry-run까지 확인했고 실제 Actions 실행은
-  아직이다
+- phase `stocks-52w-high` (52주 지표) — **완료**. `main` 머지 후 실제 Actions 발송까지 확인했다.
+  모든 시세 줄에 52주 고점 대비 하락률과 범위 내 위치가 붙는다
+- phase `stocks-latest-close` (마감 후 최신 종가) — 구현·문서 **완료**, `main` 미머지.
+  장 마감 후 `close` 배열에 그날 종가가 반영되지 않는 구간 때문에 하루 전 데이터가 발송되던
+  문제를 `meta.regularMarketPrice` 로 고쳤다
+
+**관심 종목 등록 완료** (2026-08-21): `STOCKS_WATCHLIST_US=QQQ:나스닥100`,
+`STOCKS_WATCHLIST_KR=005930.KS:삼성전자,000660.KS:SK하이닉스`.
+S&P 500은 지수 블록에 이미 있어 관심 종목에서 뺐다.
 
 ## phase daily-brief-mvp (AI 브리핑) — 완료
 
@@ -85,7 +91,7 @@
 회귀 실행에서 Gemini 선별 호출이 약 6분 걸렸다(수집 완료 00:17:42 → 선별 완료 00:23:49).
 실패는 아니지만 워크플로 `timeout-minutes` 를 넘길 여지가 있다 — 아래 "남은 것" 참고.
 
-## phase stocks-52w-high (52주 지표) — 구현·문서 완료, 머지 전
+## phase stocks-52w-high (52주 지표) — 완료
 
 `bash scripts/verify.sh` exit **0** (ruff check + ruff format --check + pytest **145 passed**).
 `stocks-brief` 완료 시점의 128건에서 17건 늘었다(quotes 12→22 · render 13→20).
@@ -108,24 +114,49 @@
 | `python3 -m secretary.stocks --market us --dry-run` | exit **0**. 지수 3건 + 관심 종목 2건 **모든 시세 줄**에 52주 줄이 붙었다(예: `52주 고점 대비 -8.1%  (범위 내 77%)`). 조각 1개 |
 | `python3 -m secretary.stocks --market kr --dry-run` | exit **0**. 지수 3건 + 관심 종목 2건 모든 시세 줄에 52주 줄. 조각 1개 |
 | 기존 파이프라인 회귀 `python3 -m secretary.main --dry-run` | exit **0**. 중복 제거 후 126 → 선별 5 → 본문 5/5 → 조각 1개 |
-| **실제 Actions 실행** | **아직 없다.** 브랜치 `feat-stocks-52w-high` 를 머지하지 않았다 — 52주 줄을 확인한 것은 dry-run 출력까지다 |
+| **실제 Actions 실행** | 2026-08-21 00:1x에 `main` 머지 후 `stocks-kr`·`stocks-us` 수동 실행 — 둘 다 **success**. 52주 줄이 실제 발송 메시지에 붙는 것을 확인했다 |
 | 신고가(`drawdown_pct >= 0`) 표시면 | **실데이터로는 미확인.** dry-run 5종목이 모두 고점 아래였다. 단위 테스트로만 검증했다 |
 
 dry-run에는 문서 예시 종목(`AAPL`, `NVDA`, `005930.KS`, `035720.KQ`)을 환경 변수로 주입해 썼다.
 실제 관심 종목이 아니다.
 
+## phase stocks-latest-close (마감 후 최신 종가) — 구현·문서 완료, 머지 전
+
+`bash scripts/verify.sh` exit **0** (pytest **156 passed**). `stocks-52w-high` 의 145건에서 11건 늘었다.
+
+**문제**: 2026-08-21 00:13 KST 실행에서 한국장 브리핑이 이틀 전(8/19) 데이터를 싣고 "휴장"을
+잘못 표시했다. 8/20 bar는 존재하나 `close` 가 `None` 이었고, 같은 응답의
+`meta.regularMarketPrice`(271000)와 `meta.regularMarketTime`(8/20 15:30:20 정규 마감)은 정답을
+갖고 있었다. 버그가 아니라 **설계가 이 경우를 몰랐다**.
+
+- **step 0 latest-close** — `quotes.latest_and_previous` 가 `meta.regularMarketPrice`/
+  `regularMarketTime` 을 최신 시세·기준일로 쓰고, 직전 종가는 `close` 배열에서 **기준일보다
+  이전 날짜**의 마지막 유효값으로 잡는다. `meta` 를 못 읽거나 이전 날짜 유효값이 없으면 기존
+  방식으로 폴백한다 — 11건 신설(156건)
+- **step 1 docs** — `BUSINESS_RULES` 등락률 규칙 개정(`chartPreviousClose` 금지는 유지),
+  `ENGINEERING_NOTES` 에 함정 2건(마감 후 `close=None`, `currentTradingPeriod` 로 장중 판정 불가),
+  `FINDINGS` 에서 해결된 "기준일 후퇴" 항목 삭제.
+  **`execute.py` 는 이 step을 `error` 로 기록했지만 문서는 실제로 갱신됐다** — 에이전트가 작업을
+  마치고 `index.json` status를 갱신하기 직전 `stop_sequence` 로 종료돼(`output_tokens=1`,
+  3회 모두 0초) 하네스가 "did not update status" 로 오판했다. STATUS.md 갱신만 누락돼 수동 보완했다
+
+### 검증 기록 (실제 실행, 2026-08-22 00:0x)
+
+| 항목 | 결과 |
+| --- | --- |
+| `bash scripts/verify.sh` | exit **0** — 156 passed |
+| `python3 -m secretary.stocks --market kr --dry-run` | exit **0**. 기준일 **2026-08-21**(마지막 거래일)로 정정됐다. 수정 전에는 8/19가 나왔다. 실행일이 토요일이라 "휴장" 표기도 이번엔 **사실이다** |
+| `python3 -m secretary.stocks --market us --dry-run` | exit **0**. 기준일 2026-08-21, 휴장 표기 없음(미국 로컬 날짜와 일치) |
+| **16:00 KST 정시 실행에서의 기준일** | **아직 관측하지 못했다.** dry-run은 자정 무렵에만 돌렸다 — 아래 "남은 것" 참고 |
+
 ## 남은 것 (우선순위 순)
 
-1. **`STOCKS_WATCHLIST_US` / `STOCKS_WATCHLIST_KR` 등록** — 아직 등록하지 않았다. 등록 전에는
-   지수·환율만 발송된다. 절차는 `docs/OPERATIONS.md` "4. 관심 종목 등록"
-   (**Secrets 탭이 아니라 Variables 탭**).
-2. **종목 등록 후 재검증** — 2026-08-20 수동 실행으로 conclusion success·토큰 마스킹·상태 커밋
-   없음까지 확인했다(위 표). 다만 종목이 미등록이었으므로 **아직 확인되지 않은 것**이 셋 남았다.
-   - `vars.STOCKS_WATCHLIST_*`가 실제로 주입돼 관심 종목이 조회되는지
-   - **기준일이 당일로 찍히는지** — 자정 dry-run에서 한국장 기준일이 하루 물러나고 "휴장"이
-     잘못 붙은 사례가 있다(`docs/tracking/FINDINGS.md`). 첫 16:00 KST 정시 실행에서 확인한다.
-   - **52주 줄이 실제 발송 메시지에 붙는지** — dry-run 출력에서는 확인했으나, `stocks-52w-high`
-     를 머지한 뒤의 Actions 실행은 아직 없다.
+1. **`stocks-latest-close` 머지 후 첫 16:00 KST 정시 실행 확인** — 기준일이 **당일**로 찍히고
+   "휴장"이 붙지 않아야 한다. 자정 무렵 dry-run으로는 마지막 거래일까지만 확인했다.
+   `close` 배열이 채워졌다 비워지는 구간이 있으므로, 정시 실행 시점의 동작은 관측해야 안다.
+2. **`vars` 주입은 확인됨** (2026-08-21 00:1x Actions 실행) — 관심 종목이 한국 2건 / 미국 1건
+   조회됐고, 한국장은 급등락 2건이 잡혀 뉴스 수집·LLM 해설까지 프로덕션에서 완주했다.
+   다만 그 발송분은 이 phase가 고친 기준일 문제 때문에 8/19 데이터였다.
 3. **뉴스 검색어 오염 대응** — 해설 경로 자체는 2026-08-20에 `STOCKS_MOVE_THRESHOLD=2` 로
    낮춰 **실데이터로 완주시켰다**(위 표). 다만 표시명이 플랫폼 이름과 겹치는 종목(`NAVER`)에서
    무관한 헤드라인만 모이는 것을 확인했다 — `docs/tracking/FINDINGS.md` 참조. LLM이 이유를
